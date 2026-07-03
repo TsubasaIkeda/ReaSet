@@ -4419,6 +4419,7 @@
                 switch (tok[0]) {
                     case "TRANSPORT":
                         var nowPlaying = (parseInt(tok[1]) & 1) === 1;
+                        window._isPaused = (parseInt(tok[1]) & 2) === 2; // REAPER playstate bit1 = paused
                         currentPos = parseFloat(tok[2]);
                         if (nowPlaying && !wasPlayingLast) {
                             if (!showStartTime) { showStartTime = Date.now() - showAccumulatedMs; }
@@ -5747,12 +5748,20 @@
             }
 
             // ── Auto show/hide sections with playback ────────────────────────
-            // Open the active song's section toggle while it is playing; close it when
-            // playback ends (stop/pause) or when we move to another song. Only toggles we
-            // opened automatically are auto-closed — a song the user expanded by hand is
-            // left untouched. toggleExpand() only flips expandedSongs + CSS (no re-render),
-            // so it is safe to call every transport tick.
+            // Open the active song's section toggle while it is playing, and keep it open.
+            // Close it only when we move to another song (the new one opens instead) or when
+            // playback is GENUINELY stopped — NOT on pause, and NOT during the brief "stopped"
+            // blip that happens while auto-advancing between songs (guarded by the transition
+            // locks), which otherwise made the next song flash open then closed. Only toggles
+            // we opened automatically are auto-closed; a song the user expanded by hand is left
+            // untouched. toggleExpand() only flips expandedSongs + CSS (no re-render), so it is
+            // safe to call every transport tick.
             var _actId = activeRegion ? activeRegion.id : null;
+            var _now = Date.now();
+            var _inTransition =
+                (window._endOfRegionLocked && _now < window._endOfRegionLocked) ||
+                (window._playRegionLocked  && _now < window._playRegionLocked)  ||
+                (window._playbackInitiated && _now < window._playbackInitiated);
             // Collapse the previously auto-opened song once it is no longer active.
             if (window._autoExpandedId && window._autoExpandedId !== _actId) {
                 if (expandedSongs[window._autoExpandedId]) toggleExpand(window._autoExpandedId, true);
@@ -5762,8 +5771,9 @@
                 if (isPlaying && !expandedSongs[_actId]) {
                     toggleExpand(_actId, true);           // playing → open
                     window._autoExpandedId = _actId;
-                } else if (!isPlaying && window._autoExpandedId === _actId && expandedSongs[_actId]) {
-                    toggleExpand(_actId, true);           // playback ended → close what we opened
+                } else if (!isPlaying && !window._isPaused && !_inTransition &&
+                           window._autoExpandedId === _actId && expandedSongs[_actId]) {
+                    toggleExpand(_actId, true);           // genuinely stopped → close what we opened
                     window._autoExpandedId = null;
                 }
             }
