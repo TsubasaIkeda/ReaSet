@@ -7296,8 +7296,16 @@
 
         // ── Init ───────────────────────────────────────────────────
         function initMidi() {
+            // Web MIDI needs a secure context: localhost / 127.0.0.1 / HTTPS.
+            // A LAN IP over plain http (e.g. http://192.168.x.x:8080) is NOT secure,
+            // so the browser hides navigator.requestMIDIAccess entirely.
+            if (!window.isSecureContext) {
+                setMidiStatusUI('error',
+                    'MIDI needs a secure context — open ReaSet via http://localhost, http://127.0.0.1 or HTTPS (not the LAN IP). Current: ' + location.origin);
+                return;
+            }
             if (!navigator.requestMIDIAccess) {
-                setMidiStatusUI('error', 'Web MIDI API no disponible en este navegador');
+                setMidiStatusUI('error', 'Web MIDI API not supported in this browser (use Chrome/Edge/Opera; Safari is not supported)');
                 return;
             }
             navigator.requestMIDIAccess({ sysex: false }).then(function(access) {
@@ -7315,7 +7323,7 @@
                 loadMidiMappings();
                 updateMidiStatusUI();
             }, function(err) {
-                setMidiStatusUI('error', 'Acceso MIDI denegado: ' + err.message);
+                setMidiStatusUI('error', 'MIDI access denied: ' + (err && err.name ? err.name + ' — ' : '') + (err && err.message ? err.message : err));
             });
         }
 
