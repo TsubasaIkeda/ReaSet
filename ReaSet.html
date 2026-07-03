@@ -5749,6 +5749,15 @@
         // --- 8. PLAYBACK UI ---
         function updatePlaybackUI() {
             if (isDragging) return;
+            // Mark that we're inside the transport watcher. On a Device-Sync SLAVE, the
+            // automatic transport commands emitted from here (loop jumps, auto-advance,
+            // auto-stop) are suppressed so the slave follows the MASTER's mirror instead of
+            // self-driving — otherwise the slave would re-loop after the master already
+            // exited. Manual actions (button clicks / keys) run OUTSIDE this flag and still
+            // work, so the slave stays fully operable. try/finally guarantees reset across
+            // the many early returns below.
+            window._inWatcher = true;
+            try {
             // Clear active state on song rows
             var prev = document.querySelector('.song-row.active');
             if (prev) prev.classList.remove('active');
@@ -6298,6 +6307,7 @@
                     if (cwPlay) cwPlay.innerHTML = isPlaying ? '&#9646;&#9646; PAUSE' : '&#9654; PLAY';
                 }
             }
+            } finally { window._inWatcher = false; }
         }
 
         // --- 9. CANVAS MODE ---
@@ -8041,11 +8051,17 @@
             // --- wwr_req をラップ（ローカル動作は常に実行、送信対象のみ相手へ転送）---
             var origWwrReq = (typeof window.wwr_req === 'function') ? window.wwr_req : function () {};
             window.wwr_req = function (cmd) {
-                // The SLAVE stays fully operable — its own transport commands run locally as
-                // usual (so you can drive it directly / take over on failover). It just does
-                // not SEND to the peer (only role === 'master' mirrors). To avoid a runaway
-                // native-loop Repeat fighting the master's mirrored jumps, the slave also
-                // bypasses native looping (see _deviceSyncActive in _reaperNativeLoopOn).
+                // The SLAVE stays fully operable — MANUAL commands (button clicks / keys) run
+                // locally as usual, so you can drive it directly / take over on failover. But
+                // AUTOMATIC transport commands from the watcher (updatePlaybackUI sets
+                // window._inWatcher) are swallowed on the slave, so it follows the MASTER's
+                // mirror instead of self-driving — otherwise it would re-loop after the master
+                // already exited the loop. The slave never SENDS to the peer (only master does).
+                if (role === 'slave' && window._inWatcher &&
+                    (typeof cmd === 'string' || typeof cmd === 'number')) {
+                    var _sc = (typeof cmd === 'string') ? cmd : String(cmd);
+                    if (shouldMirror(_sc.trim())) { return undefined; }
+                }
                 var result = origWwrReq.apply(this, arguments);
                 try {
                     if (role === 'master' && peer && (typeof cmd === 'string' || typeof cmd === 'number')) {
