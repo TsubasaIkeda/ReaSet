@@ -5124,8 +5124,12 @@
                     var item = saved[j];
                     if (mainMap.hasOwnProperty(item.id)) {
                         var d = mainMap[item.id];
-                        d.chain = item.chain; d.skipped = (item.skipped === true); d.loop = (item.loop === true);
-                        window.g_songLoopDefault[d.id]  = !!d.loopDefault;  // record parsed defaults (saved value wins)
+                        // On (re)load, seed loop/skip/chain from the REGION NAME defaults, not
+                        // the persisted setlist values — so a reload always resets these to what
+                        // the REAPER regions define (per-song loop toggles are not persisted).
+                        // Only the song ORDER is taken from the saved setlist.
+                        d.loop = !!d.loopDefault; d.skipped = !!d.defaultSkip; d.chain = !!d.chainDefault;
+                        window.g_songLoopDefault[d.id]  = !!d.loopDefault;
                         window.g_songChainDefault[d.id] = !!d.chainDefault;
                         displayList.push(d); delete mainMap[item.id];
                     }
@@ -5136,6 +5140,9 @@
                 for (var n = 0; n < newItems.length; n++) { newItems[n].chain = !!newItems[n].chainDefault; newItems[n].skipped = !!newItems[n].defaultSkip; newItems[n].loop = !!newItems[n].loopDefault; window.g_songLoopDefault[newItems[n].id] = !!newItems[n].loopDefault; window.g_songChainDefault[newItems[n].id] = !!newItems[n].chainDefault; displayList.push(newItems[n]); }
                 if (displayList.length > 0 && !isPlaying) wwr_req("SET/POS/" + displayList[0].start);
                 initialized = true;
+                // MASTER: after a reload the state is reset to region-name defaults — broadcast
+                // it once so the stale mirrored uiState is overwritten and the SLAVE resets too.
+                if (typeof _broadcastUiState === 'function') { _broadcastUiState(); }
             } else {
                 var activeIDs = {};
                 for (var m = 0; m < displayList.length; m++) {
