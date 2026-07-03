@@ -4557,6 +4557,23 @@
         // the native loop without waiting for a section-change event.
         window._pendingNativeLoopArm = null;
 
+        // True when Device Sync is active as MASTER with a peer configured.
+        function _isMasterMirroring() {
+            try {
+                var c = window.__reasetMirror && window.__reasetMirror.getConfig();
+                return !!(c && c.role === 'master' && c.peer);
+            } catch (e) { return false; }
+        }
+        // Force any native loop / REAPER Repeat OFF on BOTH machines. When mirroring, the
+        // SET/REPEAT/0 + nativeLoop/off are mirrored to the SLAVE, so a backup that is
+        // holding its own native loop (Repeat + time selection, possibly from a stale
+        // persistent ExtState) is torn down together with us — it can't keep looping after
+        // the master leaves the loop.
+        function _mirrorClearPeerLoop() {
+            wwr_req("SET/REPEAT/0");
+            wwr_req("SET/EXTSTATEPERSIST/ReaSet/nativeLoop/off");
+        }
+
         // Signal the background script to start a native loop session.
         // The script picks up the ExtState values on its next defer() tick.
         // loopMax = 0 means infinite (cancelled via "off" or stop).
@@ -4567,11 +4584,9 @@
             // be mirrored to the backup machine — the two would loop on independent clocks
             // and exit at different times. When mirroring as MASTER, skip native loop and
             // let the JS SET/POS path drive the loop, so every jump and the exit are
-            // explicit commands that mirror to the peer in lockstep.
-            try {
-                var _mc = window.__reasetMirror && window.__reasetMirror.getConfig();
-                if (_mc && _mc.role === 'master' && _mc.peer) { return; }
-            } catch (e) {}
+            // explicit commands that mirror to the peer in lockstep. Also force the peer OUT
+            // of any native loop it may hold, so it follows our mirrored SET/POS jumps.
+            if (_isMasterMirroring()) { _mirrorClearPeerLoop(); return; }
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/loopStart/" + start.toFixed(5));
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/loopEnd/"   + end.toFixed(5));
             // Always send 0 (infinite) — JS counts crossings and sends 'off' when done.
@@ -4587,8 +4602,13 @@
         // engine can fire another Repeat jump before the async Lua cleanup runs,
         // causing the "buffering / last-second repeating" effect at song transitions.
         function _reaperNativeLoopOff() {
-            if (!window.REASET_NATIVE_LOOP) return;
-            if (!window._nativeLoopSubId) return;
+            // When mirroring as MASTER, always broadcast the teardown so the SLAVE exits the
+            // loop with us — even though this machine has no native loop armed (it was
+            // bypassed in _reaperNativeLoopOn). This is the fix for "backup keeps looping
+            // after the main machine already left the loop".
+            var mirroring = _isMasterMirroring();
+            if (!window.REASET_NATIVE_LOOP && !mirroring) return;
+            if (!window._nativeLoopSubId && !mirroring) return;
             wwr_req("SET/REPEAT/0");                               // synchronous: same HTTP batch as next SET/POS
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/nativeLoop/off");  // async: Lua cleans up region + loop points
             window._nativeLoopSubId = null;
@@ -5624,8 +5644,9 @@
             if (window.subStates[id]) {
                 window.subStates[id].loop = !window.subStates[id].loop;
                 var isNowOn = window.subStates[id].loop;
-                if (!isNowOn && window._nativeLoopSubId === id) {
-                    // Turning loop OFF → cancel native loop immediately
+                if (!isNowOn && (window._nativeLoopSubId === id || _isMasterMirroring())) {
+                    // Turning loop OFF → cancel native loop immediately.
+                    // When mirroring, this also tears the loop down on the backup.
                     _reaperNativeLoopOff();
                 } else if (isNowOn && window.REASET_NATIVE_LOOP &&
                            window._nativeLoopSubId !== id) {
@@ -5844,8 +5865,11 @@
                         // _nativeLoopSubId stays set while still inside the looping section
                         // (even after Lua finishes), so the JS end-of-region guard keeps firing
                         // and prevents JS from re-jumping the playhead after Repeat stops.
-                        if (window._nativeLoopSubId &&
-                            window._nativeLoopSubId !== activeSub.id) {
+                        // When mirroring, always broadcast on section change so the backup's
+                        // loop (from the section we just left) is cleared too.
+                        if ((window._nativeLoopSubId &&
+                             window._nativeLoopSubId !== activeSub.id) ||
+                            _isMasterMirroring()) {
                             _reaperNativeLoopOff();
                         }
 
