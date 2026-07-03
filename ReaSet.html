@@ -3265,7 +3265,7 @@
             line-height: 1.3;
         }
 
-        /* ══ LIVE VIEW — MAPA DE REGIONES ════════════════════════════ */
+        /* ══ LIVE VIEW — REGION MAP ════════════════════════════ */
 
         /* Outer wrapper: hides/shows the whole map + arc zone */
         #live-region-map-wrap {
@@ -3450,7 +3450,7 @@
                 STOP</button>
             <button id="footer-loop-btn" class="t-btn t-btn-loop" onclick="toggleCurrentLoop()">↻ Loop</button>
             <button class="t-btn t-btn-sync" onclick="wwr_start()">SYNC</button>
-            <span id="native-loop-indicator" title="ReaSet NativeLoop conectado"
+            <span id="native-loop-indicator" title="ReaSet NativeLoop connected"
                   style="display:none; color:#34c759; font-size:10px; font-weight:700;
                          letter-spacing:0.5px; align-self:center; padding:0 4px;
                          opacity:0.8;">⬡ NL</span>
@@ -3682,9 +3682,9 @@
         </div>
 
         <div class="sidebar-section">
-            <div class="sidebar-section-title">2台同期 / フェイルオーバー</div>
+            <div class="sidebar-section-title">Device Sync / Failover</div>
             <button class="sidebar-action-btn sab-slate" id="reaset-sync-btn" onclick="reasetSyncOpen()">
-                <span class="sab-icon">⇄</span> <span id="reaset-sync-btn-label">2台同期: OFF</span>
+                <span class="sab-icon">⇄</span> <span id="reaset-sync-btn-label">Device Sync: OFF</span>
             </button>
         </div>
     </div>
@@ -3703,7 +3703,7 @@
 
             <div class="appearance-slider-row">
                 <div class="appearance-slider-label-row">
-                    <span class="appearance-slider-name">Luminancia</span>
+                    <span class="appearance-slider-name">Brightness</span>
                     <span class="appearance-slider-value" id="appearance-val-brightness">100%</span>
                 </div>
                 <input type="range" class="appearance-slider" id="appearance-slider-brightness"
@@ -3713,7 +3713,7 @@
 
             <div class="appearance-slider-row">
                 <div class="appearance-slider-label-row">
-                    <span class="appearance-slider-name">Contraste</span>
+                    <span class="appearance-slider-name">Contrast</span>
                     <span class="appearance-slider-value" id="appearance-val-contrast">100%</span>
                 </div>
                 <input type="range" class="appearance-slider" id="appearance-slider-contrast"
@@ -3723,7 +3723,7 @@
 
             <div class="appearance-slider-row">
                 <div class="appearance-slider-label-row">
-                    <span class="appearance-slider-name">Saturación</span>
+                    <span class="appearance-slider-name">Saturation</span>
                     <span class="appearance-slider-value" id="appearance-val-saturation">100%</span>
                 </div>
                 <input type="range" class="appearance-slider" id="appearance-slider-saturation"
@@ -3732,7 +3732,7 @@
             </div>
 
             <hr class="appearance-divider">
-            <button class="appearance-reset-btn" onclick="resetAppearance()">Restablecer valores</button>
+            <button class="appearance-reset-btn" onclick="resetAppearance()">Reset</button>
         </div>
     </div>
 
@@ -3744,26 +3744,26 @@
             <!-- Status row -->
             <div class="midi-status-row">
                 <span class="midi-dot" id="midi-status-dot"></span>
-                <span id="midi-status-text">Inicializando…</span>
+                <span id="midi-status-text">Initializing…</span>
             </div>
 
             <!-- Learn section -->
             <div class="midi-learn-box">
-                <div class="midi-section-label">Acción a asignar</div>
+                <div class="midi-section-label">Action to assign</div>
                 <select id="midi-action-select" class="midi-action-select">
                     <option value="play">▶ Play</option>
                     <option value="stop">■ Stop</option>
                     <option value="play_pause">⏸ Play / Pause</option>
-                    <option value="next_song">→ Canción siguiente</option>
-                    <option value="prev_song">← Canción anterior</option>
-                    <option value="next_section">↓ Sección siguiente</option>
-                    <option value="prev_section">↑ Sección anterior</option>
-                    <option value="toggle_loop">⟳ Toggle Loop (canción activa)</option>
-                    <option value="restart_song">↺ Reiniciar canción</option>
-                    <option value="toggle_skip">⊘ Toggle Skip (canción activa)</option>
+                    <option value="next_song">→ Next song</option>
+                    <option value="prev_song">← Previous song</option>
+                    <option value="next_section">↓ Next section</option>
+                    <option value="prev_section">↑ Previous section</option>
+                    <option value="toggle_loop">⟳ Toggle Loop (active song)</option>
+                    <option value="restart_song">↺ Restart song</option>
+                    <option value="toggle_skip">⊘ Toggle Skip (active song)</option>
                 </select>
                 <button id="midi-learn-btn" class="midi-learn-btn" onclick="toggleMidiLearn()">
-                    Escuchar siguiente nota / CC…
+                    Listen for next note / CC…
                 </button>
                 <div id="midi-listen-status" class="midi-listen-status"></div>
             </div>
@@ -3771,16 +3771,16 @@
             <hr class="midi-hr">
 
             <!-- Current mappings -->
-            <div class="midi-section-label" style="margin-bottom:8px">Asignaciones activas</div>
+            <div class="midi-section-label" style="margin-bottom:8px">Active mappings</div>
             <div id="midi-mappings-list" class="midi-mappings-list">
                 <div style="font-size:12px;color:rgba(255,255,255,0.3);text-align:center;padding:12px 0">
-                    Sin asignaciones todavía
+                    No mappings yet
                 </div>
             </div>
-            <button class="midi-clear-btn" onclick="clearAllMidiMappings()">Borrar todas las asignaciones</button>
+            <button class="midi-clear-btn" onclick="clearAllMidiMappings()">Clear all mappings</button>
 
             <div class="midi-modal-footer">
-                <button class="midi-close-btn" onclick="closeMidiModal()">Cerrar</button>
+                <button class="midi-close-btn" onclick="closeMidiModal()">Close</button>
             </div>
         </div>
     </div>
@@ -3820,7 +3820,7 @@
             <div id="live-sub-progress-fill"></div>
         </div>
 
-        <!-- MAPA DE REGIONES -->
+        <!-- REGION MAP -->
         <div id="live-region-map-wrap">
             <!-- SVG arc connectors float above the bar (outside overflow:hidden) -->
             <div id="live-region-map-connectors"></div>
@@ -3849,7 +3849,7 @@
         </div>
         <!-- Live View config panel -->
         <div id="live-config-panel">
-            <div class="lcp-title">Elementos visibles</div>
+            <div class="lcp-title">Visible elements</div>
             <div id="live-config-items"><!-- populated by JS --></div>
         </div>
         <!-- Live View config button -->
@@ -3858,7 +3858,7 @@
                 <circle cx="7" cy="7" r="2.2" stroke="currentColor" stroke-width="1.4"/>
                 <path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.9 2.9l1.05 1.05M10.05 10.05l1.05 1.05M2.9 11.1l1.05-1.05M10.05 3.95l1.05-1.05" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
             </svg>
-            Vista
+            View
         </button>
 
         <div class="live-size-ctrl"
@@ -3879,7 +3879,7 @@
             <div class="modal-body" id="appConfirmBody"></div>
             <div class="modal-actions">
                 <button class="m-btn m-btn-cancel" onclick="closeAppConfirm(false)">Cancel</button>
-                <button class="m-btn m-btn-danger" id="appConfirmOk" onclick="closeAppConfirm(true)">Confirmar</button>
+                <button class="m-btn m-btn-danger" id="appConfirmOk" onclick="closeAppConfirm(true)">Confirm</button>
             </div>
         </div>
     </div>
@@ -4172,19 +4172,19 @@
                 + '</div></div>'
                 + '<div class="song-ctx-section"><div class="song-ctx-row">'
                 + '<span class="song-ctx-label"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><circle cx="6.5" cy="7.5" r="4.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" fill="none"/><line x1="6.5" y1="7.5" x2="8.5" y2="5.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" stroke-linecap="round"/><path d="M5 1.5h3" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" stroke-linecap="round"/><path d="M6.5 1.5v1.2" stroke="rgba(255,255,255,0.65)" stroke-width="1.3" stroke-linecap="round"/></svg> Delay after song</span></div>'
-                + '<div class="song-ctx-sublabel">Segundos antes del siguiente</div>'
+                + '<div class="song-ctx-sublabel">Seconds before next</div>'
                 + '<div class="song-ctx-row"><input type="number" min="0" max="300" step="1" class="song-ctx-input num-input" id="_ctx_delay_' + songId + '" value="' + delayAfter + '" ' + (stopAfter ? 'disabled' : '') + ' placeholder="0" onchange="_ctxSetDelay(\'' + songId + '\',this.value)">'
                 + '<span class="song-ctx-label" style="font-size:11px;color:rgba(255,255,255,0.38)">s</span></div></div>'
                 + '<div class="song-ctx-section">'
-                + '<div class="song-ctx-sublabel"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><rect x="2" y="1.5" width="9" height="10" rx="1.2" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><path d="M4.5 5h4M4.5 7h4M4.5 9h2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.1" stroke-linecap="round"/></svg> Nota / Descripci\u00f3n</div>'
-                + '<textarea class="song-ctx-input" rows="2" id="_ctx_desc_' + songId + '" placeholder="Nota sobre la canci\u00f3n\u2026" style="resize:none" onchange="_ctxSetDesc(\'' + songId + '\',this.value)">' + desc + '</textarea>'
+                + '<div class="song-ctx-sublabel"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><rect x="2" y="1.5" width="9" height="10" rx="1.2" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><path d="M4.5 5h4M4.5 7h4M4.5 9h2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.1" stroke-linecap="round"/></svg> Note / Description</div>'
+                + '<textarea class="song-ctx-input" rows="2" id="_ctx_desc_' + songId + '" placeholder="Note about the song\u2026" style="resize:none" onchange="_ctxSetDesc(\'' + songId + '\',this.value)">' + desc + '</textarea>'
                 + '</div>'
                 + '<div class="song-ctx-section"><div class="song-ctx-row">'
                 + '<span class="song-ctx-label"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><circle cx="6.5" cy="6.5" r="5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><circle cx="4.2" cy="5" r="1.1" fill="rgba(255,255,255,0.65)"/><circle cx="8.8" cy="5" r="1.1" fill="rgba(255,255,255,0.65)"/><circle cx="6.5" cy="9" r="1.1" fill="rgba(255,255,255,0.65)"/></svg> Color</span>'
                 + '<label class="song-ctx-toggle"><input type="checkbox" id="_ctx_coloron_' + songId + '"' + (colorOn ? ' checked' : '') + ' onchange="_ctxToggleColor(\'' + songId + '\',this.checked)"><span class="song-ctx-track"><span class="song-ctx-thumb"></span></span></label>'
                 + '</div><div id="_ctx_palette_' + songId + '"' + (!colorOn ? ' style="display:none"' : '') + '>'
                 + '<div class="song-ctx-palette">' + paletteHtml + '</div>'
-                + '<button class="ctx-clear-btn" onclick="_ctxClearColor(\'' + songId + '\')">\u2715 Quitar color</button>'
+                + '<button class="ctx-clear-btn" onclick="_ctxClearColor(\'' + songId + '\')">\u2715 Remove color</button>'
                 + '</div></div>';
 
             document.body.appendChild(panel);
@@ -4290,15 +4290,15 @@
             panel.innerHTML =
                 '<div class="song-ctx-header">' + (secName.length > 22 ? secName.slice(0,20) + '\u2026' : secName) + '</div>'
                 + '<div class="song-ctx-section">'
-                + '<div class="song-ctx-sublabel"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><rect x="2" y="1.5" width="9" height="10" rx="1.2" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><path d="M4.5 5h4M4.5 7h4M4.5 9h2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.1" stroke-linecap="round"/></svg> Nota / Descripci\u00f3n</div>'
-                + '<textarea class="song-ctx-input" rows="2" id="_ctx_subdesc_' + subId + '" placeholder="Nota sobre la secci\u00f3n\u2026" style="resize:none" onchange="_ctxSetDesc(\'' + subId + '\',this.value)">' + desc + '</textarea>'
+                + '<div class="song-ctx-sublabel"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><rect x="2" y="1.5" width="9" height="10" rx="1.2" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><path d="M4.5 5h4M4.5 7h4M4.5 9h2.5" stroke="rgba(255,255,255,0.65)" stroke-width="1.1" stroke-linecap="round"/></svg> Note / Description</div>'
+                + '<textarea class="song-ctx-input" rows="2" id="_ctx_subdesc_' + subId + '" placeholder="Note about the section\u2026" style="resize:none" onchange="_ctxSetDesc(\'' + subId + '\',this.value)">' + desc + '</textarea>'
                 + '</div>'
                 + '<div class="song-ctx-section"><div class="song-ctx-row">'
                 + '<span class="song-ctx-label"><svg width="13" height="13" viewBox="0 0 13 13" style="display:inline;vertical-align:-2px"><circle cx="6.5" cy="6.5" r="5" stroke="rgba(255,255,255,0.65)" stroke-width="1.2" fill="none"/><circle cx="4.2" cy="5" r="1.1" fill="rgba(255,255,255,0.65)"/><circle cx="8.8" cy="5" r="1.1" fill="rgba(255,255,255,0.65)"/><circle cx="6.5" cy="9" r="1.1" fill="rgba(255,255,255,0.65)"/></svg> Color</span>'
                 + '<label class="song-ctx-toggle"><input type="checkbox" id="_ctx_subcoloron_' + subId + '"' + (colorOn ? ' checked' : '') + ' onchange="_subCtxToggleColor(\'' + subId + '\',this.checked)"><span class="song-ctx-track"><span class="song-ctx-thumb"></span></span></label>'
                 + '</div><div id="_ctx_subpalette_' + subId + '"' + (!colorOn ? ' style="display:none"' : '') + '>'
                 + '<div class="song-ctx-palette">' + paletteHtml + '</div>'
-                + '<button class="ctx-clear-btn" onclick="_subCtxClearColor(\'' + subId + '\')">\u2715 Quitar color</button>'
+                + '<button class="ctx-clear-btn" onclick="_subCtxClearColor(\'' + subId + '\')">\u2715 Remove color</button>'
                 + '</div></div>';
 
             document.body.appendChild(panel);
@@ -4507,7 +4507,7 @@
                 if (n === "--XR-NO-TEXT--") n = "";
                 if (t !== xr_lyrics_last || n !== xr_lyrics_last_next) {
                     if (t === "") {
-                        lyricsContent.innerHTML = '<div class="lyrics-no-data">Sin datos de letra.<br><small>Activa el script Lua <b>X-Raym Convert Lyrics</b> en REAPER<br>con un track llamado <b>"lyrics"</b> con notas en los items.</small></div>';
+                        lyricsContent.innerHTML = '<div class="lyrics-no-data">No lyrics data.<br><small>Enable the <b>X-Raym Convert Lyrics</b> Lua script in REAPER<br>with a track named <b>"lyrics"</b> with notes on the items.</small></div>';
                     } else {
                         // Exact X-Raym method: split on \\n, join with <br>
                         var lines = t.split("\\n");
@@ -5566,7 +5566,7 @@
             var item, i;
             for (i = 0; i < displayList.length; i++) { if (displayList[i].id == id) { item = displayList[i]; break; } }
             if (!item) return;
-            var newPos = parseInt(prompt('Nueva posici\u00f3n para "' + item.name + '"?'));
+            var newPos = parseInt(prompt('New position for "' + item.name + '"?'));
             if (!newPos || newPos < 1 || newPos > displayList.length) return;
             displayList.splice(newPos - 1, 0, displayList.splice(i, 1)[0]);
             var newOrder = [];
@@ -6386,7 +6386,7 @@
             var content = document.getElementById("lyrics-content");
             if (!content) return;
             if (!raw || raw === "--XR-NO-TEXT--" || raw === "") {
-                content.innerHTML = '<div class="lyrics-no-data">Sin datos de letra.<br><small>Asegurate de tener el script Lua corriendo en REAPER<br>con un track llamado <b>"lyrics"</b> y notas en los items.</small></div>';
+                content.innerHTML = '<div class="lyrics-no-data">No lyrics data.<br><small>Make sure the Lua script is running in REAPER<br>with a track named <b>"lyrics"</b> and notes on the items.</small></div>';
                 return;
             }
             // X-Raym stores newlines as literal \n sequences — split on them
@@ -6936,7 +6936,7 @@
             document.getElementById("live-progress-fill").style.width = pct + "%";
             var rem = activeRegion ? (activeRegion.end - currentPos) : 0; if (rem < 0) rem = 0;
             document.getElementById("live-time-rem").innerText = "-" + formatTime(rem);
-            // Mapa de Regiones
+            // Region Map
             if (g_liveSettings && g_liveSettings.showRegionMap) {
                 updateLiveRegionMap(activeRegion, pct, liveActiveSub, isLooping);
             }
@@ -7001,7 +7001,7 @@
             document.getElementById('appConfirmTitle').textContent = title;
             document.getElementById('appConfirmBody').textContent = body;
             var okBtn = document.getElementById('appConfirmOk');
-            okBtn.textContent = okLabel || 'Confirmar';
+            okBtn.textContent = okLabel || 'Confirm';
             okBtn.className = 'app-modal-btn ' + (danger !== false ? 'btn-danger' : 'btn-confirm');
             _confirmCallback = onConfirm;
             document.getElementById('appConfirmOverlay').classList.add('open');
@@ -7169,12 +7169,12 @@
             'play':          '▶ Play',
             'stop':          '■ Stop',
             'play_pause':    '⏸ Play / Pause',
-            'next_song':     '→ Canción siguiente',
-            'prev_song':     '← Canción anterior',
-            'next_section':  '↓ Sección siguiente',
-            'prev_section':  '↑ Sección anterior',
+            'next_song':     '→ Next song',
+            'prev_song':     '← Previous song',
+            'next_section':  '↓ Next section',
+            'prev_section':  '↑ Previous section',
             'toggle_loop':   '⟳ Toggle Loop',
-            'restart_song':  '↺ Reiniciar canción',
+            'restart_song':  '↺ Restart song',
             'toggle_skip':   '⊘ Toggle Skip'
         };
 
@@ -7342,19 +7342,19 @@
 
         function startMidiLearn() {
             if (!g_midiAccess) {
-                document.getElementById('midi-listen-status').innerText = 'MIDI no inicializado. Recarga la página.';
+                document.getElementById('midi-listen-status').innerText = 'MIDI not initialized. Reload the page.';
                 return;
             }
             g_midiLearnActive = true;
             var btn = document.getElementById('midi-learn-btn');
             btn.classList.add('listening');
-            btn.innerText = 'Escuchando… (toca una nota o mueve un CC)';
+            btn.innerText = 'Listening… (play a note or move a CC)';
             document.getElementById('midi-listen-status').innerText = '';
 
             // Auto-cancel after 10s
             g_midiLearnTimeout = setTimeout(function() {
                 cancelMidiLearn();
-                document.getElementById('midi-listen-status').innerText = 'Tiempo agotado. Inténtalo de nuevo.';
+                document.getElementById('midi-listen-status').innerText = 'Timed out. Try again.';
             }, 10000);
         }
 
@@ -7364,7 +7364,7 @@
             var btn = document.getElementById('midi-learn-btn');
             if (btn) {
                 btn.classList.remove('listening');
-                btn.innerText = 'Escuchar siguiente nota / CC…';
+                btn.innerText = 'Listen for next note / CC…';
             }
         }
 
@@ -7380,14 +7380,14 @@
             var btn = document.getElementById('midi-learn-btn');
             if (btn) {
                 btn.classList.remove('listening');
-                btn.innerText = 'Escuchar siguiente nota / CC…';
+                btn.innerText = 'Listen for next note / CC…';
             }
 
             var typeNames = { 9: 'Note', 11: 'CC', 12: 'PC' };
             var typeName  = typeNames[type] || 'Msg';
             var chLabel   = 'Ch' + (channel + 1);
             document.getElementById('midi-listen-status').innerText =
-                '✓ Asignado: ' + typeName + ' ' + data1 + ' (' + chLabel + ') → ' + (MIDI_ACTION_LABELS[actionId] || actionId);
+                '✓ Assigned: ' + typeName + ' ' + data1 + ' (' + chLabel + ') → ' + (MIDI_ACTION_LABELS[actionId] || actionId);
         }
 
         function deleteMidiMapping(key) {
@@ -7397,7 +7397,7 @@
         }
 
         function clearAllMidiMappings() {
-            if (!confirm('¿Borrar todas las asignaciones MIDI?')) return;
+            if (!confirm('Clear all MIDI mappings?')) return;
             g_midiMappings = {};
             saveMidiMappings();
             renderMidiMappingsList();
@@ -7409,7 +7409,7 @@
             if (!list) return;
             var keys = Object.keys(g_midiMappings);
             if (keys.length === 0) {
-                list.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);text-align:center;padding:12px 0">Sin asignaciones todavía</div>';
+                list.innerHTML = '<div style="font-size:12px;color:rgba(255,255,255,0.3);text-align:center;padding:12px 0">No mappings yet</div>';
                 return;
             }
             var html = '';
@@ -7440,7 +7440,7 @@
             var ind  = document.getElementById('midi-sidebar-indicator');
             if (!dot || !text) return;
             if (!g_midiAccess) {
-                setMidiStatusUI('error', 'No inicializado');
+                setMidiStatusUI('error', 'Not initialized');
                 return;
             }
             var inputs = [];
@@ -7448,7 +7448,7 @@
             if (inputs.length === 0) {
                 dot.className  = 'midi-dot';
                 if (ind) ind.className = 'midi-indicator';
-                text.innerText = 'Ningún dispositivo MIDI conectado';
+                text.innerText = 'No MIDI device connected';
             } else {
                 dot.className  = 'midi-dot active';
                 if (ind) ind.className = 'midi-indicator active';
@@ -7484,7 +7484,7 @@
         // ══════════════════════════════════════════════════════════
 
         // ══════════════════════════════════════════════════════════
-        // LIVE VIEW — VISIBILITY SETTINGS & MAPA DE REGIONES
+        // LIVE VIEW — VISIBILITY SETTINGS & REGION MAP
         // ══════════════════════════════════════════════════════════
 
         // ── Fallback color palette for sub-regions without a color ──
@@ -7503,22 +7503,22 @@
             showTimeRem:      true,   // remaining time
             showUpNext:       true,   // "Up Next"
             showTransport:    true,   // transport buttons
-            showRegionMap:    false,  // Mapa de Regiones (new)
+            showRegionMap:    false,  // Region Map (new)
         };
 
         // ── Config panel definitions ───────────────────────────────
         var LIVE_CFG_DEFS = [
-            { key: 'showHeader',       label: 'Cabecera LIVE + reloj' },
-            { key: 'showSetlistName',  label: 'Nombre del setlist' },
-            { key: 'showSongName',     label: 'Nombre de canción' },
-            { key: 'showSubRegion',    label: 'Sección activa' },
+            { key: 'showHeader',       label: 'LIVE header + clock' },
+            { key: 'showSetlistName',  label: 'Setlist name' },
+            { key: 'showSongName',     label: 'Song name' },
+            { key: 'showSubRegion',    label: 'Active section' },
             null,
-            { key: 'showProgressBars', label: 'Barras de progreso' },
-            { key: 'showRegionMap',    label: 'Mapa de Regiones ✦', isNew: true },
+            { key: 'showProgressBars', label: 'Progress bars' },
+            { key: 'showRegionMap',    label: 'Region Map ✦', isNew: true },
             null,
-            { key: 'showTimeRem',      label: 'Tiempo restante' },
-            { key: 'showUpNext',       label: 'Siguiente canción' },
-            { key: 'showTransport',    label: 'Controles de transporte' },
+            { key: 'showTimeRem',      label: 'Time remaining' },
+            { key: 'showUpNext',       label: 'Next song' },
+            { key: 'showTransport',    label: 'Transport controls' },
         ];
 
         // ── Persistence ────────────────────────────────────────────
@@ -7624,7 +7624,7 @@
             return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
         }
 
-        // ── Mapa de Regiones renderer ──────────────────────────────
+        // ── Region Map renderer ──────────────────────────────
         var _lrmLastSongId = null;
 
         function updateLiveRegionMap(activeRegion, pct, liveActiveSub, isLooping) {
@@ -7921,9 +7921,9 @@
                 var lbl = document.getElementById('reaset-sync-btn-label');
                 if (!btn) { return; }
                 var conf = {
-                    off:    { bg: 'linear-gradient(135deg,#37474f,#546e7a)', t: '2台同期: 無効' },
-                    master: { bg: 'linear-gradient(135deg,#B71C1C,#D32F2F)', t: '2台同期: 親機（送信）' },
-                    slave:  { bg: 'linear-gradient(135deg,#004D40,#00796B)', t: '2台同期: 子機（受信）' }
+                    off:    { bg: 'linear-gradient(135deg,#37474f,#546e7a)', t: 'Device Sync: OFF' },
+                    master: { bg: 'linear-gradient(135deg,#B71C1C,#D32F2F)', t: 'Device Sync: MASTER (send)' },
+                    slave:  { bg: 'linear-gradient(135deg,#004D40,#00796B)', t: 'Device Sync: SLAVE (receive)' }
                 };
                 var m = conf[role] || conf.off;
                 var label = m.t;
@@ -7957,7 +7957,7 @@
 
                 // ヘッダ
                 var header = el('div', null, 'display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;');
-                var title = el('span', { textContent: '2台同期 / フェイルオーバー' },
+                var title = el('span', { textContent: 'Device Sync / Failover' },
                     'font-size:13px;font-weight:800;color:rgba(255,255,255,0.95);letter-spacing:1.5px;');
                 var closeBtn = el('button', { type: 'button', textContent: '✕' },
                     'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;' +
@@ -7967,14 +7967,14 @@
                 modal.appendChild(header);
 
                 // 役割選択
-                var roleLabel = el('div', { textContent: '役割' },
+                var roleLabel = el('div', { textContent: 'Role' },
                     'font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.5);' +
                     'text-transform:uppercase;margin-bottom:8px;');
                 modal.appendChild(roleLabel);
 
                 var roleRow = el('div', null, 'display:flex;gap:8px;margin-bottom:18px;');
                 refs.roleBtns = {};
-                var roleLabels = { off: '無効', master: '親機（送信）', slave: '子機（受信）' };
+                var roleLabels = { off: 'OFF', master: 'MASTER (send)', slave: 'SLAVE (receive)' };
                 ['off', 'master', 'slave'].forEach(function (r) {
                     var b = el('button', { type: 'button', textContent: roleLabels[r] },
                         'flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.12);' +
@@ -7986,20 +7986,20 @@
                 modal.appendChild(roleRow);
 
                 // 相手アドレス入力
-                var peerLabel = el('div', { textContent: '相手機のアドレス (IP:port)' },
+                var peerLabel = el('div', { textContent: 'Peer address (IP:port)' },
                     'font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.5);' +
                     'text-transform:uppercase;margin-bottom:6px;');
                 modal.appendChild(peerLabel);
 
                 refs.peerInput = el('input',
-                    { type: 'text', placeholder: '例: 192.168.1.20:8080', autocomplete: 'off',
+                    { type: 'text', placeholder: 'e.g. 192.168.1.20:8080', autocomplete: 'off',
                       autocapitalize: 'off', spellcheck: false },
                     'width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;' +
                     'border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.35);' +
                     'color:#fff;font-size:14px;font-family:var(--font-mono,monospace);');
                 modal.appendChild(refs.peerInput);
 
-                var hint = el('div', { textContent: '※ 自分ではなく「相手機」のWeb Remoteアドレスを入力します。' },
+                var hint = el('div', { textContent: '* Enter the OTHER device\'s Web Remote address, not this one.' },
                     'font-size:11px;color:rgba(255,255,255,0.4);margin:6px 2px 16px;line-height:1.5;');
                 modal.appendChild(hint);
 
@@ -8011,7 +8011,7 @@
                 modal.appendChild(refs.status);
 
                 // 保存ボタン
-                var saveBtn = el('button', { type: 'button', textContent: '保存して有効化' },
+                var saveBtn = el('button', { type: 'button', textContent: 'Save & Activate' },
                     'width:100%;padding:13px 0;border-radius:12px;border:none;cursor:pointer;' +
                     'background:linear-gradient(135deg,#00796B,#00695C);color:#fff;font-size:14px;font-weight:700;');
                 saveBtn.addEventListener('click', saveConfig);
@@ -8039,17 +8039,17 @@
             function renderStatus() {
                 if (!refs.status) { return; }
                 var lines = [];
-                lines.push('送信バッチ: ' + stats.batches + ' / コマンド: ' + stats.commands + ' / エラー: ' + stats.errors);
-                if (stats.lastError) { lines.push('直近エラー: ' + stats.lastError); }
+                lines.push('Batches sent: ' + stats.batches + ' / Commands: ' + stats.commands + ' / Errors: ' + stats.errors);
+                if (stats.lastError) { lines.push('Last error: ' + stats.lastError); }
                 var effPeer = refs.peerInput ? refs.peerInput.value.trim() : peer;
                 if (pendingRole === 'master' && !effPeer) {
-                    lines.push('⚠ 親機ですが相手アドレスが未設定です。');
+                    lines.push('⚠ MASTER role but peer address is not set.');
                 } else if (pendingRole === 'master') {
-                    lines.push('親機（送信）: このマシンから相手機へ送信します。');
+                    lines.push('MASTER (send): this machine sends to the peer.');
                 } else if (pendingRole === 'slave') {
-                    lines.push('子機（受信）: 送信しません（相手機からの受信のみ）。');
+                    lines.push('SLAVE (receive): does not send (receive only).');
                 } else {
-                    lines.push('無効: 同期は行いません。');
+                    lines.push('OFF: sync disabled.');
                 }
                 refs.status.textContent = lines.join('\n');
             }
