@@ -3471,7 +3471,7 @@
             <div class="sidebar-section-title">Show Options</div>
 
             <div class="toggle-row">
-                <label class="n-switch"><input type="checkbox" id="autoScrollToggle" checked>
+                <label class="n-switch"><input type="checkbox" id="autoScrollToggle" checked onchange="_saveOptionToggle(this)">
                     <div class="n-track">
                         <div class="n-thumb"></div>
                     </div>
@@ -3481,7 +3481,7 @@
             </div>
 
             <div class="toggle-row">
-                <label class="n-switch"><input type="checkbox" id="queueModeToggle">
+                <label class="n-switch"><input type="checkbox" id="queueModeToggle" onchange="_saveOptionToggle(this)">
                     <div class="n-track">
                         <div class="n-thumb"></div>
                     </div>
@@ -3491,7 +3491,7 @@
             </div>
 
             <div class="toggle-row">
-                <label class="n-switch"><input type="checkbox" id="autoStopToggle" checked>
+                <label class="n-switch"><input type="checkbox" id="autoStopToggle" checked onchange="_saveOptionToggle(this)">
                     <div class="n-track">
                         <div class="n-thumb"></div>
                     </div>
@@ -3511,7 +3511,7 @@
             </div>
 
             <div class="toggle-row">
-                <label class="n-switch"><input type="checkbox" id="initSongMidiToggle">
+                <label class="n-switch"><input type="checkbox" id="initSongMidiToggle" onchange="_saveOptionToggle(this)">
                     <div class="n-track">
                         <div class="n-thumb"></div>
                     </div>
@@ -4387,6 +4387,22 @@
         var currentSetlistName = localStorage.getItem(CURRENT_KEY) || "Default";
         if (!setlists["Default"]) setlists["Default"] = [];
         if (!setlists[currentSetlistName]) currentSetlistName = "Default";
+
+        // Persist Show Options toggles (Auto-Scroll / Queue Mode / Auto-Stop / MIDI Init) so
+        // they survive reloads. Hide Skips / Grid View / Stop Hold already persist via their
+        // own keys. Per-song loop / skip / chain states are intentionally NOT persisted here.
+        var OPTION_TOGGLE_IDS = ['autoScrollToggle', 'queueModeToggle', 'autoStopToggle', 'initSongMidiToggle'];
+        function _saveOptionToggle(el) {
+            if (el && el.id) { try { localStorage.setItem('reaset_opt_' + el.id, el.checked ? '1' : '0'); } catch (e) {} }
+        }
+        function _restoreOptionToggles() {
+            for (var i = 0; i < OPTION_TOGGLE_IDS.length; i++) {
+                var id = OPTION_TOGGLE_IDS[i], v = null;
+                try { v = localStorage.getItem('reaset_opt_' + id); } catch (e) {}
+                if (v !== null) { var el = document.getElementById(id); if (el) el.checked = (v === '1'); }
+            }
+        }
+        _restoreOptionToggles();
 
         // Init UI
         document.getElementById("hideSkippedToggle").checked = hideSkippedMode;
