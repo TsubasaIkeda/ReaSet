@@ -1,615 +1,334 @@
-##### 🇬🇧 ENGLISH
+# ReaSet
 
-## 📌 Table of Contents
-- [💛 Support this project](#-support-this-project)
-- [1) What is ReaSet?](#1-what-is-reaset)
-- [2) Main features](#2-main-features)
-- [3) Credits and acknowledgements](#3-credits-and-acknowledgements)
-- [4) Requirements](#4-requirements)
-- [5) Installation](#5-installation)
-- [6) Usage setup](#6-usage-setup)
-- [7) Usage Manual](#7-interactive-usage-manual)
-  - [Display Filters](#display-filters)
-  - [Region Name Command Reference](#region-name-command-reference)
-- [8) Keyboard Shortcuts](#8-keyboard-shortcuts)
-- [9) Quick troubleshooting](#9-quick-troubleshooting)
+## 📌 目次
+- [💛 このプロジェクトを支援する](#-このプロジェクトを支援する)
+- [1) ReaSet とは？](#1-reaset-とは)
+- [2) 主な機能](#2-主な機能)
+- [3) クレジットと謝辞](#3-クレジットと謝辞)
+- [4) 必要要件](#4-必要要件)
+- [5) インストール](#5-インストール)
+- [6) 運用セットアップ](#6-運用セットアップ)
+- [7) 使い方マニュアル](#7-使い方マニュアル)
+  - [2台同期 / フェイルオーバー](#2台同期--フェイルオーバー)
+  - [表示フィルター](#表示フィルター)
+  - [リージョン名コマンド リファレンス](#リージョン名コマンド-リファレンス)
+- [8) キーボードショートカット](#8-キーボードショートカット)
+- [9) トラブルシューティング](#9-トラブルシューティング)
 
 ---
 
-## 💛 Support this project
-If this project helps you, you can support development here:
+## 💛 このプロジェクトを支援する
+このプロジェクトが役に立ったら、開発の支援をお願いします:
 
 <a href="https://ko-fi.com/W7W81VLW05" target="_blank">
   <img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Buy Me a Coffee at ko-fi.com" height="36" style="border:0px;height:36px;" />
 </a>
 
+---
+
+## 1) ReaSet とは？
+**ReaSet** は、ライブのセットリスト管理に特化した **REAPER** 用の Web インターフェースです。
+
+プロジェクトの土台:
+- `suckyble` の **ReaSetlistManager** に着想を得ています。
+- **X-Raym** のスクリプト/ロジックをベースに、**歌詞・コード**表示を拡張しています。
+
+主な目的:
+- ライブ本番中に曲（リージョン）を整理・実行する。
+- トランスポート（再生 / 停止 / 頭出し / 次へ）を操作する。
+- 複数のセットリストをローカル保存で管理する。
+- 専用トラックから同期した歌詞・コードを表示する。
 
 ---
 
-## 1) What is ReaSet?
-**ReaSet** is a web interface for **REAPER**, designed for live setlist management.
+## 2) 主な機能
+- ✅ セットリスト管理（作成 / 削除 / 切替）。
+- 🔀 ドラッグ&ドロップによる曲の並び替え。
+- 🎯 曲の状態: アクティブ / キュー / スキップ / ループ / チェイン。
+- ⏯️ 画面上のトランスポート操作。
+- 💾 JSON エクスポート / インポート。
+- 🧠 `localStorage` によるローカル保存（REAPER プロジェクトごとに分離）。
+- 🎤 歌詞パネル + 🎸 コードパネル。
+- 🎨 表示カスタマイズ（テーマ / フォント / サイズ / コード色 / 表示フィルター）。
+- 🗂️ サブリージョンのネストに対応（ループ・スキップ・色・メモを個別設定）。
+- 🏷️ インラインコマンド — REAPER のリージョン名から直接、挙動を制御。
+- 🔢 分数ループカウンター（例 `2/4`）をアクティブなセクションにリアルタイム表示。
+- 🖥️ ライブビュー（サブリージョンの進捗バー・次セクション表示・ループカウンター付き）。
+- 🌗 リアルタイム表示フィルター: 明度・コントラスト・彩度をサイドバーのスライダーで調整。
+- 🔁 **`_L` / `_C` サフィックス** — リージョン名末尾の短縮記法でループ・オートスタート（チェイン）を指定（**新機能**）。
+- ⬡ **Native Loop** — `ReaSet_NativeLoop.lua`（任意）で REAPER ネイティブの高精度ループに対応（**新機能**）。
+- 🔗 **2台同期 / フェイルオーバー** — メイン機→予備機へ頭出し・再生・停止を片方向ミラーし、ライブ中の機材ダウンに備える（**新機能**）。
 
-Project foundation:
-- Inspired by **ReaSetlistManager** by `suckyble`.
-- Extended with **lyrics and chords** display based on **X-Raym** scripts/logic.
-
-Main goals:
-- Organize and run songs (regions) during live shows.
-- Control transport (play/stop/cue/next).
-- Manage multiple setlists with local persistence.
-- Display synced lyrics/chords from dedicated tracks.
-
----
-
-## 2) Main features
-- ✅ Setlist management (create/delete/switch).
-- 🔀 Drag & drop song reordering.
-- 🎯 Song states: active, queued, skipped, loop, chain.
-- ⏯️ On-screen transport controls.
-- 💾 JSON export/import.
-- 🧠 Local persistence via `localStorage`, isolated per REAPER project.
-- 🎤 Lyrics panel + 🎸 chords panel.
-- 🎨 Visual customization (themes/fonts/sizes/chord color/display filters).
-- 🗂️ Nested sub-regions with individual loop, skip, color and notes overrides.
-- 🏷️ Inline command system — control behavior directly from REAPER region names.
-- 🔢 Fractional loop counter badge (e.g. `2/4`) shown live on the active section.
-- 🖥️ Live View with sub-region progress bar, next section indicator and loop counter.
-- 🌗 Real-time display filters: brightness, contrast and saturation via sidebar sliders.
-
-Main file:
+メインファイル:
 - `ReaSet.html`
 
-Included dependencies:
+同梱の依存物:
 - `Sortable.min.js`
-- Lua bridge scripts under `Requirements/`
+- `Requirements/` 内の Lua ブリッジスクリプト
 
 ---
 
-## 3) Credits and acknowledgements
-### Base project
-- **suckyble / ReaSetlistManager**  
+## 3) クレジットと謝辞
+### ベースプロジェクト
+- **suckyble / ReaSetlistManager**
 - https://github.com/suckyble/ReaSetlistManager
 
-### Lyrics/chords integration
-- **X-Raym / REAPER-ReaScripts**  
+### 歌詞・コード連携
+- **X-Raym / REAPER-ReaScripts**
 - https://github.com/X-Raym/REAPER-ReaScripts/tree/master/Web%20Interfaces
-- Reference script:  
+- 参照スクリプト:
   `Convert Lyrics track items notes for the dedicated web browser interface.lua`
 
-### Sorting library
-- **SortableJS** (`Sortable.min.js`)
+### 並び替えライブラリ
+- **SortableJS**（`Sortable.min.js`）
 
-### AI-assisted development process
-This project was iterated, debugged, and tested with:
-- **Claude (cowork)**
-- **Google (Antigravity)**
-
-Final functional validation was performed in REAPER with real setlist usage tests.
-
-> ⚖️ Legal note: keep and respect original licenses of reused components (e.g., GPL v3 where applicable).
+> ⚖️ 法的注意: 再利用したコンポーネントの元ライセンス（該当する場合は GPL v3 など）を保持・尊重してください。
 
 ---
 
-## 4) Requirements
-### Software
-1. **REAPER** (v5+ recommended; latest preferred).
-2. A web browser (desktop/tablet/mobile).
-3. A REAPER project with regions (typically one region per song).
+## 4) 必要要件
+### ソフトウェア
+1. **REAPER**（v5 以上を推奨。最新版が望ましい）。
+2. Web ブラウザ（デスクトップ / タブレット / モバイル）。
+3. リージョンを含む REAPER プロジェクト（通常は 1 曲 = 1 リージョン）。
 
-### Minimum files
+### 最小構成ファイル
 - `ReaSet.html`
 - `Sortable.min.js`
-- Scripts in `Requirements/`:
+- `Requirements/` 内のスクリプト:
   - `X-Raym_Convert Lyrics track items notes for dedicated web browser interface.lua`
   - `X-Raym_Convert Chords track items notes for dedicated web browser interface.lua`
+  - `ReaSet_NativeLoop.lua`（任意 — ネイティブループを使う場合）
 
-### Required tracks for lyrics/chords
-- Track named exactly: `lyrics`
-- Track named exactly: `chords`
-- Each item must contain text in **Item Notes**.
+### 歌詞・コードに必要なトラック
+- 名前が正確に `lyrics` のトラック。
+- 名前が正確に `chords` のトラック。
+- 各アイテムの **Item Notes** にテキストを記入。
 
-### Script compatibility
-Scripts use `reaper.ULT_GetMediaItemNote`.
-- If your REAPER build does not recognize it, install a compatible scripting/API environment (e.g., Ultraschall API) or adapt note reading.
+### スクリプトの互換性
+スクリプトは `reaper.ULT_GetMediaItemNote` を使用します。
+- お使いの REAPER が認識しない場合は、互換のスクリプト/API 環境（例: Ultraschall API）を導入するか、ノート読み取り部分を調整してください。
 
 ---
 
-## 5) Installation
-### Step 1 — Copy web interface files
-Copy to REAPER web folder (where `main.js` is located):
+## 5) インストール
+### 手順 1 — Web インターフェースのファイルをコピー
+REAPER の web フォルダ（`main.js` がある場所）へコピー:
 - `ReaSet.html`
 - `Sortable.min.js`
 
-#### Default paths (REAPER Resource Path)
-> In REAPER: **Options > Show REAPER resource path in explorer/finder**.
+#### 既定パス（REAPER Resource Path）
+> REAPER の **Options > Show REAPER resource path in explorer/finder** から開けます。
 
 **macOS**
 - Resource Path: `~/Library/Application Support/REAPER/`
-- Web root (typical): `~/Library/Application Support/REAPER/Plugins/reaper_www_root/`
+- Web root（一般的）: `~/Library/Application Support/REAPER/Plugins/reaper_www_root/`
 
 **Windows**
 - Resource Path: `%APPDATA%\REAPER\`
-- Web root (typical): `%APPDATA%\REAPER\Plugins\reaper_www_root\`
+- Web root（一般的）: `%APPDATA%\REAPER\Plugins\reaper_www_root\`
 
 **Linux**
 - Resource Path: `~/.config/REAPER/`
-- Web root (typical): `~/.config/REAPER/Plugins/reaper_www_root/`
+- Web root（一般的）: `~/.config/REAPER/Plugins/reaper_www_root/`
 
-> `main.js` is provided by REAPER Web Interface (not included in this project).
+> `main.js` は REAPER Web Interface が提供します（本プロジェクトには含まれません）。
 
-### Step 2 — Install Lua scripts
-1. Open REAPER.
-2. Go to **Actions > Show action list**.
-3. Use **ReaScript: Load...** and load both scripts from `Requirements/`.
-4. (Recommended) Copy scripts into REAPER’s scripts folder.
-5. (Optional) Assign shortcuts or add to toolbar.
+### 手順 2 — Lua スクリプトをインストール
+1. REAPER を開く。
+2. **Actions > Show action list** を開く。
+3. **ReaScript: Load...** で `Requirements/` の各スクリプトを読み込む。
+4. （推奨）スクリプトを REAPER の scripts フォルダへコピー。
+5. （任意）ショートカット割り当てやツールバー追加。
 
-#### Default script paths
+#### スクリプトの既定パス
 - **macOS:** `~/Library/Application Support/REAPER/Scripts/`
 - **Windows:** `%APPDATA%\REAPER\Scripts\`
 - **Linux:** `~/.config/REAPER/Scripts/`
 
-### Step 3 — Prepare project
-1. Create/rename track `lyrics`.
-2. Create/rename track `chords`.
-3. Add lyrics/chords into item notes.
-4. Verify song regions in timeline.
+### 手順 3 — プロジェクトの準備
+1. `lyrics` トラックを作成 / リネーム。
+2. `chords` トラックを作成 / リネーム。
+3. アイテムノートに歌詞 / コードを記入。
+4. タイムライン上で曲リージョンを確認。
 
-### Step 4 — Launch interface
-1. Open REAPER + project.
-2. Open web interface and load `ReaSet.html`.
-3. Run Lyrics and Chords Lua scripts.
-
----
-
-## 6) Usage setup
-### Recommended live workflow
-1. Verify regions.
-2. Run Lyrics/Chords scripts.
-3. Open `ReaSet.html`.
-4. Create/select setlist.
-5. Reorder songs and set states (skip/loop/chain).
-6. Test transport before showtime.
-7. Export `.json` backup.
-
-### Persistence and backups
-- Browser-local state (`localStorage`).
-- Use Export/Import JSON for backup/migration.
-- Recommended: dated backups before major edits.
-
-### Best practices
-- Keep consistent region naming.
-- Keep a dedicated “Show-Ready” project.
-- Test on the same device/browser used on stage.
+### 手順 4 — インターフェースを起動
+1. REAPER + プロジェクトを開く。
+2. Web インターフェースで `ReaSet.html` を読み込む。
+3. Lyrics / Chords の Lua スクリプトを実行。
 
 ---
 
-## 7) Usage Manual
-### Top Bar & Visualization
-- **Grid View**: Toggles between a detailed hierarchical list or large card blocks for touch-friendly usage.
-- **Hide Skipped**: Visually removes currently "skipped" songs from the view (great for decluttering during a show).
-- **Auto-Scroll**: Automatically locks and scrolls the viewport to the currently playing active region/song.
-- **Edit Sets**: Opens the administrative management panel for creating, renaming, cloning, or deleting Setlists.
+## 6) 運用セットアップ
+### 推奨のライブワークフロー
+1. リージョンを確認。
+2. Lyrics / Chords スクリプトを実行。
+3. `ReaSet.html` を開く。
+4. セットリストを作成 / 選択。
+5. 曲を並び替え、状態（スキップ / ループ / チェイン）を設定。
+6. 本番前にトランスポートをテスト。
+7. `.json` バックアップをエクスポート。
 
-### Display Modes & Canvas
-- **Live View**: Triggers a performance-focused layout showing a gigantic track name, progress bar, time remaining, the next queued song, and localized transport controls.
-- **Lyrics & Chords (Floating Widgets)**: You can overlay floating widgets dynamically synced to the `Lyrics` and `Chords` text tracks on REAPER. They contain a contextual toolbar to adjust font sizes, typeface, and colors mapping locally on your screen.
+### 保存とバックアップ
+- 状態はブラウザローカル（`localStorage`）に保存されます。
+- バックアップ / 移行には JSON のエクスポート / インポートを使用。
+- 推奨: 大きな編集前に日付付きバックアップを取得。
 
-### Track List Interaction
-- Tracks containing sub-sections will display a dropdown button (Chevron). Expanding it allows individual targeting of nested sub-regions (e.g. Intro, Chorus, Outro).
-- The progress bar backing each track will dynamically map to the closest UI-color assigned to its native REAPER Region.
-- **PLAY NEXT**: Actively loads the specified song under the REAPER playhead cue and stops playback, eagerly awaiting you to hit Play.
+### ベストプラクティス
+- リージョン名の付け方を一貫させる。
+- 本番用の「Show-Ready」プロジェクトを分けて用意する。
+- ステージで使う端末 / ブラウザと同じ環境でテストする。
 
-### Action Commands
-- **&#9632; / &#8677; (Follow Action)**: Toggles whether playback stops at the end of the song or flows seamlessly into the next un-skipped track.
-- **&#8635; (Loop)**: Activates infinite looping over the bounded region or currently selected sub-section segment.
-- **&#10005; (Skip)**: Strikethroughs the track, completely ignoring it from linear continuous playback chains.
+---
 
-### Display Filters
-Located under **Settings — Appearance** in the sidebar. Three independent real-time sliders apply a CSS filter to the setlist body:
-- **Luminance** — 50% to 150% (default 100%)
-- **Contrast** — 50% to 150% (default 100%)
-- **Saturation** — 0% to 200% (default 100%)
+## 7) 使い方マニュアル
+### トップバーと表示
+- **Grid View**: 詳細な階層リストと、タッチ操作向けの大きなカードを切り替えます。
+- **Hide Skipped**: 現在「スキップ」中の曲を表示から隠します（本番中の見やすさ向上）。
+- **Auto-Scroll**: 再生中のアクティブなリージョン / 曲へ表示を自動追従します。
+- **Edit Sets**: セットリストの作成・リネーム・複製・削除を行う管理パネルを開きます。
 
-Values persist across sessions. A "Reset" button restores all three to default.
+### 表示モードとキャンバス
+- **Live View**: 曲名を巨大表示し、進捗バー・残り時間・次曲・トランスポートをまとめたパフォーマンス向けレイアウト。
+- **歌詞 & コード（フローティングウィジェット）**: REAPER の `Lyrics` / `Chords` トラックに同期したウィジェットを重ねて表示。フォントサイズ・書体・色を画面上で調整できます。
 
-### Region Name Command Reference
-ReaSet parses special inline commands written directly in REAPER region and marker names. Multiple commands can be combined freely. The remaining text after parsing is the display name.
+### トラックリストの操作
+- サブセクションを含む曲には展開ボタン（シェブロン）が表示され、ネストしたサブリージョン（Intro / Chorus / Outro など）を個別に操作できます。
+- 各トラックの進捗バーは、REAPER リージョンに割り当てられた色に最も近い UI カラーへ動的にマップされます。
+- **PLAY NEXT**: 指定曲を REAPER の再生ヘッド位置にキューして停止し、Play 待機状態にします。
 
-**Example:**
+### アクションコマンド
+- **&#9632; / &#8677;（Follow Action）**: 曲末で停止するか、次の非スキップ曲へシームレスに流すかを切り替えます。
+- **&#8635;（Loop）**: 対象リージョン / 選択中のサブセクションを無限ループさせます。
+- **&#10005;（Skip）**: トラックに取り消し線を付け、連続再生チェインから完全に除外します。
+
+### 2台同期 / フェイルオーバー
+ライブでメイン機・予備機の2台に同じ REAPER プロジェクト + ReaSet を用意し、常時両方を再生してミキサーのミュートで切り替え、メイン機がダウンしたら予備機へ引き継ぐための機能です。
+
+- **考え方**: 「頭出し・再生・停止」を **MASTER 機 → 相手機** へ片方向ミラーして揃えます。音声出力の切替は ReaSet の管轄外（ミキサー側で実施）。再生中のサンプル同期（MTC/LTC 等）は行いません。
+- **開き方**: サイドバー内の **Device Sync / Failover** ボタン → 設定モーダル。
+- **役割**:
+  - `OFF`（既定）… 何も送信しません（通常利用者はこのままで無害）。
+  - `MASTER (send)` … このマシンから相手機へコマンドを送信します。
+  - `SLAVE (receive)` … 送信はせず、相手からの受信のみ。
+  - ⚠ 両機を同時に MASTER にしないでください（相互送信で競合します）。
+- **相手アドレス (Peer address)**: **相手機**（自分ではない方）の Web Remote アドレスを `IP:port` 形式で入力します（例 `192.168.1.20:8080`）。
+- **送信対象**: 位置 (`SET/POS`)、リピート (`SET/REPEAT`)、ReaSet の永続 ExtState、アクション ID のみ。`TRANSPORT` / `REGION` / `MARKER` / `GET*` などのポーリング・読み取りは転送しません。
+- **保存**: 設定は `localStorage` に保存され即時有効。後方互換として URL パラメータ `?peer=IP:port&role=master|slave`、`?mirror=IP:port`（peer 指定 + master 相当）にも対応します。
+- **事前準備**: セットリスト構成は JSON のエクスポート / インポートで両機を一致させ、REAPER プロジェクト名も両機で揃えておきます。
+
+### 表示フィルター
+サイドバーの **Settings — Appearance** にあります。3 つの独立したリアルタイムスライダーが、セットリスト本体に CSS フィルターを適用します:
+- **明度 (Brightness)** — 50% 〜 150%（既定 100%）
+- **コントラスト (Contrast)** — 50% 〜 150%（既定 100%）
+- **彩度 (Saturation)** — 0% 〜 200%（既定 100%）
+
+値はセッションをまたいで保持されます。「Reset」ボタンで 3 つとも既定に戻せます。
+
+### リージョン名コマンド リファレンス
+ReaSet は、REAPER のリージョン名・マーカー名に直接書かれた特殊なインラインコマンドを解釈します。複数のコマンドは自由に組み合わせでき、解釈後に残ったテキストが表示名になります。
+
+**例:**
 ```
 Chorus {pre-chorus} +LOOP:4 [green] [.bold] [1:20]
 ```
 
-#### `+` Commands — Playback behavior
+#### `+` コマンド — 再生の挙動
 
-| Command | Description |
+| コマンド | 説明 |
 |---|---|
-| `+PAUSE` | Pauses playback at the end of the section. |
-| `+SKIP` | Marks the section as skipped by default. Appears struck through. |
-| `+LOOP` | Enables infinite looping for the section. |
-| `+LOOP:N` | Repeats the section exactly **N** times, then continues. Shows a live `X/N` badge. |
-| `+LOOPFULL` | Loop with absolute priority — any queued region waits until the loop finishes. |
+| `+PAUSE` | セクション末で再生を一時停止します。 |
+| `+SKIP` | セクションを既定でスキップ扱いにします（取り消し線で表示）。 |
+| `+LOOP` | セクションを無限ループします。 |
+| `+LOOP:N` | セクションをちょうど **N** 回繰り返してから続行します。`X/N` バッジをライブ表示。 |
+| `+LOOPFULL` | 絶対優先のループ — キュー中のリージョンがあってもループ終了まで待機します。 |
 
-#### `[]` Square brackets — Appearance & duration
+#### `_` サフィックス — リージョン名末尾の短縮記法（**新機能**）
 
-| Command | Description |
+リージョン名の**末尾**に付けるだけでループ / オートスタートを指定できる短縮記法です。順不同で組み合わせ可能（例: `My Song_C_L`, `My Song_L:2_C`）。
+
+| サフィックス | 説明 |
 |---|---|
-| `[colorname]` | Assigns a palette color to the card. |
-| `[mm:ss]` | Overrides the displayed duration of the section. |
-| `[nosong]` | Excludes the item from song count and numbering. Shown dimmed. |
-| `[.classname]` | Applies a CSS style class to the name. |
+| `_L` | ループ（`+LOOP` と同等）。 |
+| `_L:N` | N 回ループ（`+LOOP:N` と同等）。 |
+| `_C` | オートスタート / チェイン（停止せず次の曲へ連続再生）。 |
 
-Available colors: `gray` · `red` · `orange` · `amber` · `yellow` · `lime` · `green` · `emerald` · `teal` · `cyan` · `sky` · `blue` · `indigo` · `violet` · `purple` · `fuchsia` · `pink` · `rose`
+#### `[]` 角カッコ — 見た目と長さ
 
-Available classes: `.bold` · `.dim` · `.italic` · `.loud`
-
-#### `{}` Curly braces — Informational text
-
-| Command | Description |
+| コマンド | 説明 |
 |---|---|
-| `{text}` | Displays auxiliary italic text next to the section name. Not shown in Live View or Canvas. |
+| `[colorname]` | カードにパレット色を割り当てます。 |
+| `[mm:ss]` | セクションの表示時間を上書きします。 |
+| `[nosong]` | 曲数カウントと番号付けから除外します（薄く表示）。 |
+| `[.classname]` | 名前に CSS スタイルクラスを適用します。 |
 
-#### Special prefixes — Markers only
+利用可能な色: `gray` · `red` · `orange` · `amber` · `yellow` · `lime` · `green` · `emerald` · `teal` · `cyan` · `sky` · `blue` · `indigo` · `violet` · `purple` · `fuchsia` · `pink` · `rose`
 
-| Command | Description |
+利用可能なクラス: `.bold` · `.dim` · `.italic` · `.loud`
+
+#### `{}` 波カッコ — 補足テキスト
+
+| コマンド | 説明 |
 |---|---|
-| `>` | Converts the marker into a sub-section of the active song. |
-| `*` | Ignores the marker entirely — it will not appear in the app. |
-| `>>> TargetName` | Auto-jumps to the region whose name matches `TargetName` when this section ends. |
+| `{text}` | セクション名の横にイタリックの補助テキストを表示します（Live View / Canvas には非表示）。 |
 
-#### Reserved names
+#### 特殊プレフィックス — マーカー専用
 
-| Name | Description |
+| コマンド | 説明 |
 |---|---|
-| `STOP` | Stop playback marker. |
-| `SONG END` | Alias for `STOP`. |
+| `>` | マーカーをアクティブな曲のサブセクションに変換します。 |
+| `*` | マーカーを完全に無視します（アプリに表示されません）。 |
+| `>>> TargetName` | このセクション終了時に、名前が `TargetName` に一致するリージョンへ自動ジャンプします。 |
+
+#### 予約名
+
+| 名前 | 説明 |
+|---|---|
+| `STOP` | 再生停止マーカー。 |
+| `SONG END` | `STOP` のエイリアス。 |
 
 ---
 
-## 8) Keyboard Shortcuts
-ReaSet inherently supports the following global keyboard bindings to streamline command operations in rigid setups:
+## 8) キーボードショートカット
+ReaSet は、固定的なセットアップでの操作を効率化するため、以下のグローバルキーバインドに標準対応しています:
 
-| Key | Action |
+| キー | 動作 |
 | --- | --- |
-| **`Space`** | Play / Pause (Global transport toggle) |
-| **`Enter`** | Smart Stop (Puts playhead at the beginning of the current active region) |
-| **`Escape`** | Closes Live View overlay. If already closed, it immediately aborts an active 'Loop' state. |
-| **`V`** | Toggles Live View overlay open/close |
-| **`L`** | Toggles Lyrics floating widget visibility |
-| **`C`** | Toggles Chords floating widget visibility |
-| **`G`** | Toggles between List View and Grid View |
-| **`O`** | Toggles Loop state over the currently playing Region/Sub-Region |
-| **`Right Arrow`** | Cues the next valid (unskipped) track in the list |
-| **`Left Arrow`** | Jumps playhead to the direct start locus of the currently playing track |
-| **`Up Arrow`** | Cues the previous valid track in the list |
-| **`Down Arrow`** | Resets cue to the very first song in the setlist |
+| **`Space`** | 再生 / 一時停止（グローバルのトランスポート切替） |
+| **`Enter`** | スマート停止（再生ヘッドを現在のアクティブリージョン先頭へ） |
+| **`Escape`** | Live View を閉じる。既に閉じている場合はアクティブな「ループ」状態を即時解除。 |
+| **`V`** | Live View の開閉 |
+| **`L`** | 歌詞フローティングウィジェットの表示切替 |
+| **`C`** | コードフローティングウィジェットの表示切替 |
+| **`G`** | リスト表示 / グリッド表示の切替 |
+| **`O`** | 再生中のリージョン / サブリージョンのループ切替 |
+| **`→（右矢印）`** | リスト内の次の有効な（非スキップ）曲をキュー |
+| **`←（左矢印）`** | 再生ヘッドを現在再生中の曲の先頭へ |
+| **`↑（上矢印）`** | 前の有効な曲をキュー |
+| **`↓（下矢印）`** | セットリスト先頭の曲へキューをリセット |
 
 ---
 
-## 9) Quick troubleshooting
-### ❌ Lyrics not showing
-- Check exact track name `lyrics`.
-- Check item notes.
-- Check if Lyrics script is running.
-
-### ❌ Chords not showing
-- Check `chords` track.
-- Check item notes.
-- Check if Chords script is running.
-
-### ❌ `ULT_GetMediaItemNote` error
-- Missing compatible scripting/API environment; install dependency or adapt script.
-
-### ❌ No interface data/control
-- Verify Web Interface is enabled and reachable.
-- Verify `main.js` loads from the same folder.
-
----
-
-# 🇪🇸 SECCIÓN EN ESPAÑOL (INICIO)
-
-## 📌 Índice (ES)
-- [💛 Apoya el proyecto](#-apoya-el-proyecto)
-- [1) ¿Qué es ReaSet?](#1-qué-es-reaset)
-- [2) Funcionalidades principales](#2-funcionalidades-principales)
-- [3) Créditos y agradecimientos](#3-créditos-y-agradecimientos)
-- [4) Requisitos](#4-requisitos)
-- [5) Instalación](#5-instalación)
-- [6) Configuración de uso](#6-configuración-de-uso)
-- [7) Manual de uso](#7-manual-de-uso-interactivo)
-  - [Filtros de pantalla](#filtros-de-pantalla)
-  - [Referencia de comandos en nombres de región](#referencia-de-comandos-en-nombres-de-región)
-- [8) Atajos de teclado](#8-atajos-de-teclado)
-- [9) Solución rápida de problemas](#9-solución-rápida-de-problemas)
-
----
-
-## 💛 Apoya el proyecto
-Si este proyecto te sirve, puedes apoyar su desarrollo aquí:
-
-<a href="https://ko-fi.com/W7W81VLW05" target="_blank">
-  <img src="https://storage.ko-fi.com/cdn/kofi3.png?v=6" alt="Invítame un café en Ko-fi" height="36" style="border:0px;height:36px;" />
-</a>
-
-
----
-
-## 1) ¿Qué es ReaSet?
-**ReaSet** es una interfaz web para **REAPER** orientada a shows en vivo y gestión de setlists.
-
-Base del proyecto:
-- Inspirado en **ReaSetlistManager** de `suckyble`.
-- Extendido con visualización de **letras y acordes** usando lógica/script de **X-Raym**.
-
-Objetivo principal:
-- Ordenar y ejecutar canciones (regiones) durante un show.
-- Controlar transporte (play/stop/cue/next).
-- Administrar múltiples setlists con persistencia local.
-- Mostrar letras y acordes sincronizados desde pistas dedicadas.
-
----
-
-## 2) Funcionalidades principales
-- ✅ Gestión de setlists (crear/eliminar/cambiar).
-- 🔀 Drag & drop para reordenar canciones.
-- 🎯 Estado por canción: activa, en cola, omitida, loop, chain.
-- ⏯️ Controles de transporte en pantalla.
-- 💾 Exportación/importación de setlists en JSON.
-- 🧠 Persistencia local vía `localStorage`, aislada por proyecto de REAPER.
-- 🎤 Panel de letras + 🎸 panel de acordes.
-- 🎨 Personalización visual (temas, tipografías, tamaños, color de acordes, filtros de pantalla).
-- 🗂️ Regiones anidadas con loop, skip, color y notas individuales por sección.
-- 🏷️ Sistema de comandos inline — controla comportamiento directamente desde los nombres de región en REAPER.
-- 🔢 Badge de loop fraccionario (ej. `2/4`) visible en tiempo real sobre la sección activa.
-- 🖥️ Live View con barra de progreso de sub-región, indicador de sección siguiente y contador de loops.
-- 🌗 Filtros de pantalla en tiempo real: luminancia, contraste y saturación desde la sidebar.
-
-Archivo principal:
-- `ReaSet.html`
-
-Dependencias incluidas:
-- `Sortable.min.js`
-- Scripts Lua de puente en `Requirements/`
-
----
-
-## 3) Créditos y agradecimientos
-### Proyecto base
-- **suckyble / ReaSetlistManager**  
-- https://github.com/suckyble/ReaSetlistManager
-
-### Integración de letras y acordes
-- **X-Raym / REAPER-ReaScripts**  
-- https://github.com/X-Raym/REAPER-ReaScripts/tree/master/Web%20Interfaces
-- Script de referencia:  
-  `Convert Lyrics track items notes for the dedicated web browser interface.lua`
-
-### Librería de ordenamiento
-- **SortableJS** (`Sortable.min.js`)
-
-### Proceso de desarrollo asistido por IA
-Este proyecto fue iterado, depurado y testeado con apoyo de:
-- **Claude (cowork)**
-- **Google (Antigravity)**
-
-La validación funcional final se hizo en REAPER con pruebas reales de uso en setlist.
-
-> ⚖️ Nota legal: mantener y respetar licencias originales de los componentes reutilizados (por ejemplo, GPL v3 donde aplique).
-
----
-
-## 4) Requisitos
-### Software
-1. **REAPER** (v5+ recomendado; ideal versión reciente).
-2. Navegador web (desktop/tablet/móvil).
-3. Proyecto REAPER con regiones (normalmente una región por canción).
-
-### Archivos mínimos
-- `ReaSet.html`
-- `Sortable.min.js`
-- Scripts en `Requirements/`:
-  - `X-Raym_Convert Lyrics track items notes for dedicated web browser interface.lua`
-  - `X-Raym_Convert Chords track items notes for dedicated web browser interface.lua`
-
-### Pistas requeridas para letras/acordes
-- Pista llamada exactamente: `lyrics`
-- Pista llamada exactamente: `chords`
-- Cada item debe tener texto en **Item Notes**.
-
-### Compatibilidad de scripting
-Los scripts usan `reaper.ULT_GetMediaItemNote`.
-- Si tu REAPER no reconoce esa función, instala entorno/API compatible (ej. Ultraschall API) o adapta el método de lectura de notas.
-
----
-
-## 5) Instalación
-### Paso 1 — Copiar interfaz web
-Copiar en la carpeta web de REAPER (donde existe `main.js`):
-- `ReaSet.html`
-- `Sortable.min.js`
-
-#### Rutas por defecto (REAPER Resource Path)
-> En REAPER: **Options > Show REAPER resource path in explorer/finder**.
-
-**macOS**
-- Resource Path: `~/Library/Application Support/REAPER/`
-- Web root (habitual): `~/Library/Application Support/REAPER/Plugins/reaper_www_root/`
-
-**Windows**
-- Resource Path: `%APPDATA%\REAPER\`
-- Web root (habitual): `%APPDATA%\REAPER\Plugins\reaper_www_root\`
-
-**Linux**
-- Resource Path: `~/.config/REAPER/`
-- Web root (habitual): `~/.config/REAPER/Plugins/reaper_www_root/`
-
-> `main.js` lo provee REAPER Web Interface (no viene en este proyecto).
-
-### Paso 2 — Instalar scripts Lua
-1. Abrir REAPER.
-2. Ir a **Actions > Show action list**.
-3. Usar **ReaScript: Load...** y cargar ambos scripts desde `Requirements/`.
-4. (Recomendado) Copiar scripts a carpeta oficial de scripts de REAPER.
-5. (Opcional) Asignar atajos o toolbar.
-
-#### Rutas por defecto para scripts
-- **macOS:** `~/Library/Application Support/REAPER/Scripts/`
-- **Windows:** `%APPDATA%\REAPER\Scripts\`
-- **Linux:** `~/.config/REAPER/Scripts/`
-
-### Paso 3 — Preparar proyecto
-1. Crear/renombrar pista `lyrics`.
-2. Crear/renombrar pista `chords`.
-3. Escribir letras/acordes en notas de items.
-4. Verificar regiones de canciones en timeline.
-
-### Paso 4 — Abrir interfaz
-1. Abrir REAPER + proyecto.
-2. Abrir interfaz web y cargar `ReaSet.html`.
-3. Ejecutar scripts Lua de Lyrics y Chords.
-
----
-
-## 6) Configuración de uso
-### Flujo recomendado (en vivo)
-1. Verificar regiones.
-2. Ejecutar scripts Lyrics/Chords.
-3. Abrir `ReaSet.html`.
-4. Crear/seleccionar setlist.
-5. Reordenar canciones y definir estados (skip/loop/chain).
-6. Probar transporte antes del show.
-7. Exportar `.json` de respaldo.
-
-### Persistencia y backups
-- Estado local en navegador (`localStorage`).
-- Respaldos/migración vía Export/Import JSON.
-- Recomendado: backup por fecha antes de cambios grandes.
-
-### Buenas prácticas
-- Nombres consistentes de regiones.
-- Proyecto “Show-Ready” separado del de producción.
-- Testear en el mismo dispositivo/navegador que usarás en vivo.
-
----
-
-## 7) Manual de uso
-### Barra superior y visualización
-- **Grid View (Cuadrícula)**: Alterna entre diseño de lista detallada o tarjetas grandes para uso rápido.
-- **Hide Skipped**: Oculta visualmente las canciones marcadas para "saltar" (útil en vivo para no confundirse).
-- **Auto-Scroll**: Centra automáticamente la región/canción activa a medida que avanza la reproducción.
-- **Edit Sets**: Abre el panel de administración donde puedes crear, renombrar, duplicar y eliminar Setlists.
-
-### Modos y herramientas (Canvas)
-- **Live View (Modo Directo)**: Activa una interfaz enfocada para performance con nombre gigante de la canción actual, progreso, siguiente canción y botones de transporte.
-- **Letras y Acordes (Widgets fltantes)**: Puedes activar la visión superpuesta de pistas de Letras (`Lyrics`) y Acordes (`Chords`). En la esquina superior derecha del widget dispones de un selector de fuentes, tamaño, y personalización de color para adaptarlo a tu pantalla. 
-
-### Interacción de Canciones (Filas)
-- Canciones con sub-secciones mostrarán un botón desplegable (Chevrón). Expándelo para ver/operar sobre las sub-regiones individualmente (Intro, Coro, etc.).
-- La barra de progreso de cada canción heredará dinámicamente el color configurado a esa Región dentro del archivo de REAPER.
-- **PLAY NEXT**: Activa una canción específica en la cola de REAPER y detiene la reproducción allí, esperando a que presiones Play.
-
-### Comandos de región
-- **&#9632; / &#8677; (Follow Action)**: Alterna si la canción se detiene al final o continúa sin pausas hacia la siguiente en la lista.
-- **&#8635; (Loop)**: Bloquea un ciclo infinito sobre la región actual o la sub-sección seleccionada.
-- **&#10005; (Skip)**: Marca la canción con una línea tachada y se la saltará de la lista de reproducción continua.
-
-### Filtros de pantalla
-Disponibles en **Settings — Appearance** dentro de la sidebar. Tres sliders independientes aplican un filtro CSS en tiempo real al cuerpo del setlist:
-- **Luminancia** — 50% a 150% (por defecto 100%)
-- **Contraste** — 50% a 150% (por defecto 100%)
-- **Saturación** — 0% a 200% (por defecto 100%)
-
-Los valores persisten entre sesiones. El botón "Restablecer valores" devuelve todo al 100%.
-
-### Referencia de comandos en nombres de región
-ReaSet interpreta comandos especiales escritos directamente en los nombres de región y marcadores de REAPER. Se pueden combinar libremente. El texto que queda tras parsear todos los comandos es el nombre que se muestra en la app.
-
-**Ejemplo:**
-```
-Chorus {pre-coro} +LOOP:4 [green] [.bold] [1:20]
-```
-
-#### Comandos `+` — Comportamiento de reproducción
-
-| Comando | Descripción |
-|---|---|
-| `+PAUSE` | Pausa la reproducción al llegar al final de la sección. |
-| `+SKIP` | Marca la sección como omitida por defecto. Aparece tachada. |
-| `+LOOP` | Activa el loop infinito de la sección. |
-| `+LOOP:N` | Repite la sección exactamente **N** veces y luego continúa. Muestra un badge `X/N` en vivo. |
-| `+LOOPFULL` | Loop con prioridad absoluta — si hay una canción en cola, espera a que el loop termine. |
-
-#### `[]` Corchetes — Apariencia y duración
-
-| Comando | Descripción |
-|---|---|
-| `[color]` | Asigna un color de la paleta a la tarjeta. |
-| `[mm:ss]` | Sobreescribe la duración mostrada de la sección. |
-| `[nosong]` | Excluye el elemento del conteo y numeración de canciones. Aparece en opacidad reducida. |
-| `[.clase]` | Aplica una clase CSS de estilo al nombre. |
-
-Colores disponibles: `gray` · `red` · `orange` · `amber` · `yellow` · `lime` · `green` · `emerald` · `teal` · `cyan` · `sky` · `blue` · `indigo` · `violet` · `purple` · `fuchsia` · `pink` · `rose`
-
-Clases disponibles: `.bold` · `.dim` · `.italic` · `.loud`
-
-#### `{}` Llaves — Texto informativo
-
-| Comando | Descripción |
-|---|---|
-| `{texto}` | Muestra texto auxiliar en cursiva junto al nombre de la sección. No aparece en Live View ni Canvas. |
-
-#### Prefijos especiales — Solo marcadores
-
-| Comando | Descripción |
-|---|---|
-| `>` | Convierte el marcador en una sub-sección de la canción activa. |
-| `*` | Ignora completamente el marcador — no aparece en la app. |
-| `>>> NombreDestino` | Salta automáticamente a la región cuyo nombre coincida con `NombreDestino` al terminar esta sección. |
-
-#### Palabras reservadas
-
-| Nombre | Descripción |
-|---|---|
-| `STOP` | Marcador de parada de reproducción. |
-| `SONG END` | Alias de `STOP`. |
-
----
-
-## 8) Atajos de teclado
-ReaSet soporta los siguientes comandos de teclado globales para mejorar el control en entornos rígidos:
-
-| Tecla | Acción |
-| --- | --- |
-| **`Space`** | Play / Pause (Alternar estado general) |
-| **`Enter`** | Smart Stop (Detiene en el inicio de la región activa actual) |
-| **`Escape`** | Cierra la vista Live View. Si ya está cerrada, desactiva un "Loop" activo temporalmente. |
-| **`V`** | Alterna abrir/cerrar la vista "Live View" |
-| **`L`** | Alterna abrir/cerrar el widget flotante de Letras (Lyrics) |
-| **`C`** | Alterna abrir/cerrar el widget flotante de Acordes (Chords) |
-| **`G`** | Alterna entre vista de Lista (List View) y Cuadrícula (Grid View) |
-| **`O`** | Activa/Desactiva Loop en la Región/Sub-región en curso en vivo |
-| **`Flecha Derecha`** | Carga la siguiente canción válida en la cola (Cue) |
-| **`Flecha Izquierda`** | Salta directamente al punto de reproducción de la canción actual en curso |
-| **`Flecha Arriba`** | Carga la canción válida anterior en la cola |
-| **`Flecha Abajo`** | Reinicia la cola a la primera canción del Setlist completo |
-
----
-
-## 9) Solución rápida de problemas
-### ❌ No aparecen letras
-- Revisar nombre exacto de pista `lyrics`.
-- Revisar notas en items.
-- Revisar que el script de Lyrics esté activo.
-
-### ❌ No aparecen acordes
-- Revisar pista `chords`.
-- Revisar notas en items.
-- Revisar script de Chords activo.
-
-### ❌ Error `ULT_GetMediaItemNote`
-- Falta entorno/API compatible; instalar dependencia o adaptar script.
-
-### ❌ Interfaz sin datos/control
-- Verificar Web Interface habilitada y accesible.
-- Verificar carga correcta de `main.js` en la misma carpeta.
+## 9) トラブルシューティング
+### ❌ 歌詞が表示されない
+- トラック名が正確に `lyrics` か確認。
+- アイテムノートを確認。
+- Lyrics スクリプトが実行中か確認。
+
+### ❌ コードが表示されない
+- `chords` トラックを確認。
+- アイテムノートを確認。
+- Chords スクリプトが実行中か確認。
+
+### ❌ `ULT_GetMediaItemNote` エラー
+- 互換のスクリプト/API 環境が不足しています。依存を導入するかスクリプトを調整してください。
+
+### ❌ インターフェースにデータ / 制御が来ない
+- Web Interface が有効で到達可能か確認。
+- `main.js` が同じフォルダから読み込まれているか確認。
+
+### ❌ 2台同期が効かない
+- MASTER 機に **相手機（予備機）** の `IP:port` が入力されているか確認（自分のアドレスではありません）。
+- 両機が同一 LAN 上にあり、双方で Web Interface が有効か確認。
+- 両機を同時に MASTER にしていないか確認。
+- モーダルの状態表示で送信バッチ数が増え、エラー数が 0 かを確認。
