@@ -5746,6 +5746,28 @@
                 isLooping = csub ? csub.loop : activeRegion.loop;
             }
 
+            // ── Auto show/hide sections with playback ────────────────────────
+            // Open the active song's section toggle while it is playing; close it when
+            // playback ends (stop/pause) or when we move to another song. Only toggles we
+            // opened automatically are auto-closed — a song the user expanded by hand is
+            // left untouched. toggleExpand() only flips expandedSongs + CSS (no re-render),
+            // so it is safe to call every transport tick.
+            var _actId = activeRegion ? activeRegion.id : null;
+            // Collapse the previously auto-opened song once it is no longer active.
+            if (window._autoExpandedId && window._autoExpandedId !== _actId) {
+                if (expandedSongs[window._autoExpandedId]) toggleExpand(window._autoExpandedId, true);
+                window._autoExpandedId = null;
+            }
+            if (activeRegion && (g_subRegionMap[activeRegion.name] || []).length > 0) {
+                if (isPlaying && !expandedSongs[_actId]) {
+                    toggleExpand(_actId, true);           // playing → open
+                    window._autoExpandedId = _actId;
+                } else if (!isPlaying && window._autoExpandedId === _actId && expandedSongs[_actId]) {
+                    toggleExpand(_actId, true);           // playback ended → close what we opened
+                    window._autoExpandedId = null;
+                }
+            }
+
             // Loop button
             var loopBtn = document.getElementById("footer-loop-btn");
             if (isLooping) loopBtn.classList.add("active");
@@ -5774,11 +5796,8 @@
                     row.classList.add('active');
                     if (activeRegion.id !== lastActiveID) {
                         lastActiveID = activeRegion.id;
-                        // Auto-expand active song if it has sections
-                        var subs2 = g_subRegionMap[activeRegion.name] || [];
-                        if (subs2.length > 0 && !expandedSongs[activeRegion.id]) {
-                            toggleExpand(activeRegion.id, true);
-                        }
+                        // (Auto expand/collapse of sections is handled by the play-state
+                        //  block above — see _autoExpandedId.)
                         if (document.getElementById('autoScrollToggle').checked && row.scrollIntoView) {
                             row.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         }
