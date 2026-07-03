@@ -3449,7 +3449,7 @@
                 ontouchend="handleMainStopRelease(this)" style="user-select:none;-webkit-user-select:none">■
                 STOP</button>
             <button id="footer-loop-btn" class="t-btn t-btn-loop" onclick="toggleCurrentLoop()">↻ Loop</button>
-            <button class="t-btn t-btn-sync" onclick="wwr_start()">SYNC</button>
+            <button class="t-btn t-btn-sync" onclick="wwr_start();resyncStateFromReaper()">SYNC</button>
             <span id="native-loop-indicator" title="ReaSet NativeLoop connected"
                   style="display:none; color:#34c759; font-size:10px; font-weight:700;
                          letter-spacing:0.5px; align-self:center; padding:0 4px;
@@ -3676,7 +3676,7 @@
 
         <div class="sidebar-section">
             <div class="sidebar-section-title">REAPER Connection</div>
-            <button class="sidebar-action-btn sab-slate" onclick="wwr_start();closeSidebar()">
+            <button class="sidebar-action-btn sab-slate" onclick="wwr_start();resyncStateFromReaper();closeSidebar()">
                 <span class="sab-icon">↻</span> Sync
             </button>
         </div>
@@ -4759,6 +4759,17 @@
                                     loopFull:     rFlags.loopFull, loopMax: rFlags.loopMax,
                                     loopCount:    0, _loopDefault: rFlags.loop, _skipInit: rFlags.skip
                                 };
+                            } else if (window._forceStateResync) {
+                                // Sync button: force-align this sub-region's state to the
+                                // CURRENT REAPER region name (discard drifted UI toggles).
+                                window.subStates[entry.id].loop          = rFlags.loop;
+                                window.subStates[entry.id]._loopDefault  = rFlags.loop;
+                                window.subStates[entry.id].skipped       = rFlags.skip || false;
+                                window.subStates[entry.id]._skipInit     = rFlags.skip;
+                                window.subStates[entry.id].loopFull      = rFlags.loopFull;
+                                window.subStates[entry.id].loopMax       = rFlags.loopMax;
+                                window.subStates[entry.id].loopCount     = 0;
+                                window.subStates[entry.id]._loopExhausted = false;
                             } else {
                                 // Real-time loop detection: if the parsed default changed
                                 // (user added/removed +LOOP from region name), apply it immediately.
@@ -5078,6 +5089,16 @@
                     if (mainMap.hasOwnProperty(itm.id)) {
                         var rd = mainMap[itm.id];
                         itm.name = rd.name; itm.start = rd.start; itm.end = rd.end; itm.duration = rd.duration; itm.color = rd.color;
+                        if (window._forceStateResync) {
+                            // Sync button: force-align this song's state to the CURRENT
+                            // REAPER region name (discard drifted UI toggles / saved values).
+                            itm.loop    = !!rd.loopDefault;
+                            itm.chain   = !!rd.chainDefault;
+                            itm.skipped = !!rd.defaultSkip;
+                            window.g_songLoopDefault[itm.id]  = !!rd.loopDefault;
+                            window.g_songChainDefault[itm.id] = !!rd.chainDefault;
+                            lastRenderChecksum = '';
+                        }
                         // Real-time loop detection: if the parsed default (+LOOP / _L) changed
                         // because the user edited the region name, apply it immediately.
                         var prevSongDef = window.g_songLoopDefault[itm.id];
@@ -5106,9 +5127,24 @@
                 newItems2.sort(function (a, b) { return a.start - b.start; });
                 for (var n2 = 0; n2 < newItems2.length; n2++) { newItems2[n2].chain = !!newItems2[n2].chainDefault; newItems2[n2].skipped = false; newItems2[n2].loop = !!newItems2[n2].loopDefault; window.g_songLoopDefault[newItems2[n2].id] = !!newItems2[n2].loopDefault; window.g_songChainDefault[newItems2[n2].id] = !!newItems2[n2].chainDefault; displayList.push(newItems2[n2]); }
             }
+            window._forceStateResync = false; // consumed for this pass
             saveCurrentState();
             var cs = JSON.stringify(displayList.map(function (r) { return { id: r.id, chain: r.chain, skipped: r.skipped, loop: r.loop, name: r.name, color: r.color }; })) + (hideSkippedMode ? 1 : 0) + JSON.stringify(g_subRegionMap) + JSON.stringify(g_songOverrides);
             if (cs !== lastRenderChecksum) { lastRenderChecksum = cs; renderSetlist(); updatePlaybackUI(); }
+        }
+
+        // Sync button: re-align ReaSet's loop / chain / skip state to REAPER's CURRENT
+        // region names (the source of truth in REAPER). Any drifted UI toggles or stale
+        // saved values are discarded and re-seeded from the region names on the next
+        // syncRegions pass. Also cancels any active native loop so it re-arms cleanly.
+        function resyncStateFromReaper() {
+            window._forceStateResync = true;
+            _reaperNativeLoopOff();
+            window._pendingNativeLoopArm = null;
+            window._nlCrossings = 0;
+            window._nlPrevPos   = null;
+            lastRenderChecksum  = '';   // force re-render even if checksum matches
+            syncRegions();
         }
 
         function saveCurrentState() {
