@@ -4581,6 +4581,15 @@
                 return !!(c && c.role === 'master' && c.peer);
             } catch (e) { return false; }
         }
+        // True when Device Sync is active in EITHER role (master w/ peer, or slave). Both
+        // machines must avoid native looping: the master so its loop jumps mirror as SET/POS,
+        // the slave so a runaway Repeat doesn't fight the master's mirrored jumps.
+        function _deviceSyncActive() {
+            try {
+                var c = window.__reasetMirror && window.__reasetMirror.getConfig();
+                return !!(c && (c.role === 'slave' || (c.role === 'master' && c.peer)));
+            } catch (e) { return false; }
+        }
         // Force any native loop / REAPER Repeat OFF on BOTH machines. When mirroring, the
         // SET/REPEAT/0 + nativeLoop/off are mirrored to the SLAVE, so a backup that is
         // holding its own native loop (Repeat + time selection, possibly from a stale
@@ -4603,7 +4612,8 @@
             // let the JS SET/POS path drive the loop, so every jump and the exit are
             // explicit commands that mirror to the peer in lockstep. Also force the peer OUT
             // of any native loop it may hold, so it follows our mirrored SET/POS jumps.
-            if (_isMasterMirroring()) { _mirrorClearPeerLoop(); return; }
+            // The SLAVE bypasses native looping too (Repeat OFF locally) so it can't free-run.
+            if (_deviceSyncActive()) { _mirrorClearPeerLoop(); return; }
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/loopStart/" + start.toFixed(5));
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/loopEnd/"   + end.toFixed(5));
             // Always send 0 (infinite) — JS counts crossings and sends 'off' when done.
@@ -7974,7 +7984,7 @@
             var role = (lsRole !== null && lsRole !== '') ? lsRole : initRole;
             if (!/^(off|master|slave)$/.test(role)) { role = 'off'; }
 
-            var stats = { batches: 0, commands: 0, errors: 0, suppressed: 0, lastError: '' };
+            var stats = { batches: 0, commands: 0, errors: 0, lastError: '' };
 
             // --- 転送対象の判定（ホワイトリスト方式）---
             // 送信: 位置/リピート/ReaSet永続ExtState/アクションID(数値)
@@ -8031,18 +8041,11 @@
             // --- wwr_req をラップ（ローカル動作は常に実行、送信対象のみ相手へ転送）---
             var origWwrReq = (typeof window.wwr_req === 'function') ? window.wwr_req : function () {};
             window.wwr_req = function (cmd) {
-                // SLAVE (follower): do not self-drive transport. Only mirrored commands
-                // from the MASTER — delivered straight to this machine's Web Remote —
-                // should move playback. Suppress ReaSet's own transport-control commands
-                // (same whitelist as mirroring) so the two machines can't fight or drift.
-                // Polling / GET / reads still pass through untouched.
-                if (role === 'slave' && (typeof cmd === 'string' || typeof cmd === 'number')) {
-                    var sc = (typeof cmd === 'string') ? cmd : String(cmd);
-                    if (shouldMirror(sc.trim())) {
-                        stats.suppressed++;
-                        return undefined; // swallow: master's mirror is the single source of truth
-                    }
-                }
+                // The SLAVE stays fully operable — its own transport commands run locally as
+                // usual (so you can drive it directly / take over on failover). It just does
+                // not SEND to the peer (only role === 'master' mirrors). To avoid a runaway
+                // native-loop Repeat fighting the master's mirrored jumps, the slave also
+                // bypasses native looping (see _deviceSyncActive in _reaperNativeLoopOn).
                 var result = origWwrReq.apply(this, arguments);
                 try {
                     if (role === 'master' && peer && (typeof cmd === 'string' || typeof cmd === 'number')) {
@@ -8185,7 +8188,6 @@
                 if (!refs.status) { return; }
                 var lines = [];
                 lines.push('Batches sent: ' + stats.batches + ' / Commands: ' + stats.commands + ' / Errors: ' + stats.errors);
-                if (role === 'slave') { lines.push('Local transport suppressed: ' + stats.suppressed); }
                 if (stats.lastError) { lines.push('Last error: ' + stats.lastError); }
                 var effPeer = refs.peerInput ? refs.peerInput.value.trim() : peer;
                 if (pendingRole === 'master' && !effPeer) {
@@ -8193,7 +8195,7 @@
                 } else if (pendingRole === 'master') {
                     lines.push('MASTER (send): this machine sends to the peer. Native loop is bypassed so loop jumps mirror.');
                 } else if (pendingRole === 'slave') {
-                    lines.push('SLAVE (follow): ignores its own transport; obeys the master only.');
+                    lines.push('SLAVE (receive): stays operable; receives the master, sends nothing.');
                 } else {
                     lines.push('OFF: sync disabled.');
                 }
