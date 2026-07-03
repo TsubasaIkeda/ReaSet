@@ -4599,13 +4599,21 @@
             wwr_req("SET/REPEAT/0");
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/nativeLoop/off");
         }
-        // Loop-back seek (jump to the section/region start to repeat). Flagged so the mirror
-        // does NOT forward it — the peer loops on its own clock, and forwarding would make it
-        // double-jump. wwr_req is synchronous, so the flag is cleared immediately after.
+        // True when Device Sync is active as a SLAVE.
+        function _isSyncSlave() {
+            try {
+                var c = window.__reasetMirror && window.__reasetMirror.getConfig();
+                return !!(c && c.role === 'slave');
+            } catch (e) { return false; }
+        }
+        // Loop-back seek (jump to the section/region start to repeat). The MASTER issues it
+        // normally, so it mirrors to the peer and drives the slave's loop in lockstep — this
+        // keeps the loop AND its exit synced (mid-song +LOOP:N exits produce no command, so
+        // the slave must follow the master's mirrored jumps, not count on its own). The SLAVE
+        // therefore does NOT self-loop; it waits for the master's mirrored jump instead.
         function _loopSeek(pos) {
-            window._skipMirror = true;
-            try { wwr_req("SET/POS/" + pos); }
-            finally { window._skipMirror = false; }
+            if (_isSyncSlave()) { return; }
+            wwr_req("SET/POS/" + pos);
         }
 
         // Signal the background script to start a native loop session.
@@ -8053,11 +8061,10 @@
                 // work locally). It never SENDS to the peer (only role === 'master' mirrors).
                 var result = origWwrReq.apply(this, arguments);
                 try {
-                    // Loop-back jumps (SET/POS back to the section start to repeat) are NOT
-                    // mirrored: each machine loops on its own clock (same project/rate/start →
-                    // in sync), so mirroring them would double-jump the peer. Everything else
-                    // (song select, play, stop, auto-advance) IS mirrored to keep song-level sync.
-                    if (role === 'master' && peer && !window._skipMirror &&
+                    // Mirror all transport commands (incl. loop-back jumps) to the peer. The
+                    // slave does not self-loop (see _loopSeek), so mirroring the master's loop
+                    // jumps keeps the loop and its exit synced in lockstep.
+                    if (role === 'master' && peer &&
                         (typeof cmd === 'string' || typeof cmd === 'number')) {
                         var s = (typeof cmd === 'string') ? cmd : String(cmd);
                         var parts = s.split(';');
