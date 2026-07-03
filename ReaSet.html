@@ -3680,6 +3680,13 @@
                 <span class="sab-icon">↻</span> Sync
             </button>
         </div>
+
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">2台同期 / Failover</div>
+            <button class="sidebar-action-btn sab-slate" id="reaset-sync-btn" onclick="reasetSyncOpen()">
+                <span class="sab-icon">⇄</span> <span id="reaset-sync-btn-label">2台同期: OFF</span>
+            </button>
+        </div>
     </div>
 
     <!-- APPEARANCE MODAL -->
@@ -7803,6 +7810,292 @@
             };
             alert(msgs[topic] || "");
         }
+
+        // ══════════════════════════════════════════════════════════
+        // --- 19. 2台同期 (FAILOVER MIRROR) ---
+        // MASTER機の「頭出し・再生・停止」等のコマンドを相手機(SLAVE)へ
+        // no-corsのfetchで片方向ミラー送信する。読み取り/ポーリングは転送しない。
+        // >>> REASET_MIRROR_IIFE_START (Nodeハーネス抽出マーカー) >>>
+        (function () {
+            'use strict';
+
+            // --- 設定の初期化: localStorage を優先、無ければURLパラメータを初期値に ---
+            var initPeer = '', initRole = 'off';
+            try {
+                var qs = new URLSearchParams(window.location.search);
+                var urlMirror = qs.get('mirror');
+                var urlPeer   = qs.get('peer');
+                var urlRole   = qs.get('role');
+                if (urlMirror) { initPeer = urlMirror; initRole = 'master'; }   // ?mirror=IP:port = peer指定 & master相当
+                if (urlPeer)   { initPeer = urlPeer; }
+                if (urlRole && /^(off|master|slave)$/.test(urlRole)) { initRole = urlRole; }
+            } catch (e) { /* URLSearchParams 非対応環境は無視 */ }
+
+            var lsPeer = null, lsRole = null;
+            try {
+                lsPeer = localStorage.getItem('reaset_mirror_peer');
+                lsRole = localStorage.getItem('reaset_mirror_role');
+            } catch (e) { /* localStorage 非対応環境は無視 */ }
+
+            var peer = (lsPeer !== null && lsPeer !== '') ? lsPeer : initPeer;
+            var role = (lsRole !== null && lsRole !== '') ? lsRole : initRole;
+            if (!/^(off|master|slave)$/.test(role)) { role = 'off'; }
+
+            var stats = { batches: 0, commands: 0, errors: 0, lastError: '' };
+
+            // --- 転送対象の判定（ホワイトリスト方式）---
+            // 送信: 位置/リピート/ReaSet永続ExtState/アクションID(数値)
+            // 除外: TRANSPORT / REGION / MARKER / GET* 等のポーリング・読み取りは
+            //       いずれのパターンにも一致しないので構造的に転送されない。
+            var SEND_PATTERNS = [
+                /^SET\/POS\//i,
+                /^SET\/REPEAT\//i,
+                /^SET\/EXTSTATEPERSIST\/ReaSet\//i,
+                /^\d+$/
+            ];
+            function shouldMirror(cmd) {
+                for (var i = 0; i < SEND_PATTERNS.length; i++) {
+                    if (SEND_PATTERNS[i].test(cmd)) { return true; }
+                }
+                return false;
+            }
+
+            // --- 送信バッチ: 同一マイクロタスク内の連続コマンドを ';' で1リクエストに束ねる ---
+            var queue = [];
+            var scheduled = false;
+            function enqueue(cmd) {
+                queue.push(cmd);
+                if (!scheduled) {
+                    scheduled = true;
+                    Promise.resolve().then(flush);
+                }
+            }
+            function flush() {
+                scheduled = false;
+                if (!queue.length) { return; }
+                var batch = queue.slice();
+                queue.length = 0;
+                send(batch);
+            }
+            function send(cmds) {
+                if (role !== 'master' || !peer) { return; }
+                // コマンド内のスラッシュはREAPER Web Remoteのパス区切りなのでエンコードしない
+                var url = 'http://' + peer + '/_/' + cmds.join(';');
+                stats.batches++;
+                stats.commands += cmds.length;
+                try {
+                    fetch(url, { mode: 'no-cors', cache: 'no-store', keepalive: true })
+                        .catch(function (err) {
+                            stats.errors++;
+                            stats.lastError = (err && err.message) ? err.message : String(err);
+                        });
+                } catch (err) {
+                    stats.errors++;
+                    stats.lastError = (err && err.message) ? err.message : String(err);
+                }
+            }
+
+            // --- wwr_req をラップ（ローカル動作は常に実行、送信対象のみ相手へ転送）---
+            var origWwrReq = (typeof window.wwr_req === 'function') ? window.wwr_req : function () {};
+            window.wwr_req = function (cmd) {
+                var result = origWwrReq.apply(this, arguments);
+                try {
+                    if (role === 'master' && peer && (typeof cmd === 'string' || typeof cmd === 'number')) {
+                        var s = (typeof cmd === 'string') ? cmd : String(cmd);
+                        var parts = s.split(';');
+                        for (var i = 0; i < parts.length; i++) {
+                            var p = parts[i].trim();
+                            if (p && shouldMirror(p)) { enqueue(p); }
+                        }
+                    }
+                } catch (e) {
+                    stats.errors++;
+                    stats.lastError = (e && e.message) ? e.message : String(e);
+                }
+                return result;
+            };
+
+            // --- サイドバーボタンの表示更新 ---
+            function updateButton() {
+                var btn = document.getElementById('reaset-sync-btn');
+                var lbl = document.getElementById('reaset-sync-btn-label');
+                if (!btn) { return; }
+                var conf = {
+                    off:    { bg: 'linear-gradient(135deg,#37474f,#546e7a)', t: '2台同期: OFF' },
+                    master: { bg: 'linear-gradient(135deg,#B71C1C,#D32F2F)', t: '2台同期: MASTER' },
+                    slave:  { bg: 'linear-gradient(135deg,#004D40,#00796B)', t: '2台同期: SLAVE' }
+                };
+                var m = conf[role] || conf.off;
+                var label = m.t;
+                if (role === 'master' && !peer) { label += ' ⚠'; }
+                btn.style.background = m.bg;
+                if (lbl) { lbl.textContent = label; }
+            }
+
+            // --- 設定モーダルのDOM構築（innerHTML不使用: createElement/textContent）---
+            var refs = {};
+            var statsTimer = null;
+
+            function el(tag, props, styleStr) {
+                var e = document.createElement(tag);
+                if (props) { for (var k in props) { if (props.hasOwnProperty(k)) { e[k] = props[k]; } } }
+                if (styleStr) { e.style.cssText = styleStr; }
+                return e;
+            }
+
+            function buildModal() {
+                var overlay = el('div', { id: 'reaset-sync-overlay' },
+                    'position:fixed;inset:0;z-index:3600;background:rgba(0,0,0,0.65);' +
+                    '-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);' +
+                    'display:none;align-items:center;justify-content:center;');
+                overlay.addEventListener('click', function (ev) { if (ev.target === overlay) { closeModal(); } });
+
+                var modal = el('div', null,
+                    'background:#1c1c1e;border:1px solid rgba(255,255,255,0.14);border-radius:22px;' +
+                    'padding:24px;width:340px;max-width:90vw;font-family:var(--font-ui,sans-serif);' +
+                    'box-shadow:0 28px 72px rgba(0,0,0,0.85),0 4px 12px rgba(0,0,0,0.5);');
+
+                // ヘッダ
+                var header = el('div', null, 'display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;');
+                var title = el('span', { textContent: '2台同期 / FAILOVER' },
+                    'font-size:13px;font-weight:800;color:rgba(255,255,255,0.95);letter-spacing:1.5px;');
+                var closeBtn = el('button', { type: 'button', textContent: '✕' },
+                    'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;' +
+                    'color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;flex-shrink:0;');
+                closeBtn.addEventListener('click', closeModal);
+                header.appendChild(title); header.appendChild(closeBtn);
+                modal.appendChild(header);
+
+                // 役割選択
+                var roleLabel = el('div', { textContent: '役割' },
+                    'font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.5);' +
+                    'text-transform:uppercase;margin-bottom:8px;');
+                modal.appendChild(roleLabel);
+
+                var roleRow = el('div', null, 'display:flex;gap:8px;margin-bottom:18px;');
+                refs.roleBtns = {};
+                ['off', 'master', 'slave'].forEach(function (r) {
+                    var b = el('button', { type: 'button', textContent: r.toUpperCase() },
+                        'flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.12);' +
+                        'background:rgba(255,255,255,0.05);color:#fff;font-size:12px;font-weight:700;cursor:pointer;');
+                    b.addEventListener('click', function () { setPendingRole(r); });
+                    refs.roleBtns[r] = b;
+                    roleRow.appendChild(b);
+                });
+                modal.appendChild(roleRow);
+
+                // 相手アドレス入力
+                var peerLabel = el('div', { textContent: '相手機のアドレス (IP:port)' },
+                    'font-size:11px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.5);' +
+                    'text-transform:uppercase;margin-bottom:6px;');
+                modal.appendChild(peerLabel);
+
+                refs.peerInput = el('input',
+                    { type: 'text', placeholder: '例: 192.168.1.20:8080', autocomplete: 'off',
+                      autocapitalize: 'off', spellcheck: false },
+                    'width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;' +
+                    'border:1px solid rgba(255,255,255,0.14);background:rgba(0,0,0,0.35);' +
+                    'color:#fff;font-size:14px;font-family:var(--font-mono,monospace);');
+                modal.appendChild(refs.peerInput);
+
+                var hint = el('div', { textContent: '※ 自分ではなく「相手機」のWeb Remoteアドレスを入力します。' },
+                    'font-size:11px;color:rgba(255,255,255,0.4);margin:6px 2px 16px;line-height:1.5;');
+                modal.appendChild(hint);
+
+                // 状態表示
+                refs.status = el('div', null,
+                    'font-size:12px;color:rgba(255,255,255,0.6);background:rgba(255,255,255,0.04);' +
+                    'border-radius:10px;padding:11px 12px;margin-bottom:16px;line-height:1.7;' +
+                    'font-family:var(--font-mono,monospace);white-space:pre-line;');
+                modal.appendChild(refs.status);
+
+                // 保存ボタン
+                var saveBtn = el('button', { type: 'button', textContent: '保存して有効化' },
+                    'width:100%;padding:13px 0;border-radius:12px;border:none;cursor:pointer;' +
+                    'background:linear-gradient(135deg,#00796B,#00695C);color:#fff;font-size:14px;font-weight:700;');
+                saveBtn.addEventListener('click', saveConfig);
+                modal.appendChild(saveBtn);
+
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                refs.overlay = overlay;
+            }
+
+            var pendingRole = role;
+            function setPendingRole(r) {
+                pendingRole = r;
+                for (var k in refs.roleBtns) {
+                    if (refs.roleBtns.hasOwnProperty(k)) {
+                        var active = (k === r);
+                        var b = refs.roleBtns[k];
+                        b.style.background = active ? 'linear-gradient(135deg,#00796B,#00695C)' : 'rgba(255,255,255,0.05)';
+                        b.style.borderColor = active ? 'transparent' : 'rgba(255,255,255,0.12)';
+                    }
+                }
+                renderStatus();
+            }
+
+            function renderStatus() {
+                if (!refs.status) { return; }
+                var lines = [];
+                lines.push('送信バッチ: ' + stats.batches + ' / コマンド: ' + stats.commands + ' / エラー: ' + stats.errors);
+                if (stats.lastError) { lines.push('直近エラー: ' + stats.lastError); }
+                var effPeer = refs.peerInput ? refs.peerInput.value.trim() : peer;
+                if (pendingRole === 'master' && !effPeer) {
+                    lines.push('⚠ MASTERですが相手アドレスが未設定です。');
+                } else if (pendingRole === 'master') {
+                    lines.push('MASTER: このマシンから相手へ送信します。');
+                } else if (pendingRole === 'slave') {
+                    lines.push('SLAVE: 送信しません（相手からの受信のみ）。');
+                } else {
+                    lines.push('OFF: 同期は無効です。');
+                }
+                refs.status.textContent = lines.join('\n');
+            }
+
+            function saveConfig() {
+                var newPeer = refs.peerInput.value.trim();
+                var newRole = pendingRole;
+                if (!/^(off|master|slave)$/.test(newRole)) { newRole = 'off'; }
+                role = newRole;
+                peer = newPeer;
+                try {
+                    localStorage.setItem('reaset_mirror_role', role);
+                    localStorage.setItem('reaset_mirror_peer', peer);
+                } catch (e) { /* 保存不可でも動作継続 */ }
+                updateButton();
+                renderStatus();
+                closeModal();
+            }
+
+            function openModal() {
+                if (!refs.overlay) { buildModal(); }
+                pendingRole = role;
+                refs.peerInput.value = peer;
+                setPendingRole(role);
+                refs.overlay.style.display = 'flex';
+                renderStatus();
+                statsTimer = setInterval(renderStatus, 500);
+                if (typeof closeSidebar === 'function') { try { closeSidebar(); } catch (e) {} }
+            }
+            function closeModal() {
+                if (refs.overlay) { refs.overlay.style.display = 'none'; }
+                if (statsTimer) { clearInterval(statsTimer); statsTimer = null; }
+            }
+
+            // --- 公開API ---
+            window.reasetSyncOpen = openModal;
+            // テスト/デバッグ用フック（本番動作には影響しない）
+            window.__reasetMirror = {
+                getStats: function () { return stats; },
+                getConfig: function () { return { peer: peer, role: role }; },
+                shouldMirror: shouldMirror
+            };
+
+            // 初期表示反映
+            updateButton();
+        })();
+        // <<< REASET_MIRROR_IIFE_END <<<
     </script>
 </body>
 
