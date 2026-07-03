@@ -4599,6 +4599,14 @@
             wwr_req("SET/REPEAT/0");
             wwr_req("SET/EXTSTATEPERSIST/ReaSet/nativeLoop/off");
         }
+        // Loop-back seek (jump to the section/region start to repeat). Flagged so the mirror
+        // does NOT forward it — the peer loops on its own clock, and forwarding would make it
+        // double-jump. wwr_req is synchronous, so the flag is cleared immediately after.
+        function _loopSeek(pos) {
+            window._skipMirror = true;
+            try { wwr_req("SET/POS/" + pos); }
+            finally { window._skipMirror = false; }
+        }
 
         // Signal the background script to start a native loop session.
         // The script picks up the ExtState values on its next defer() tick.
@@ -5749,15 +5757,6 @@
         // --- 8. PLAYBACK UI ---
         function updatePlaybackUI() {
             if (isDragging) return;
-            // Mark that we're inside the transport watcher. On a Device-Sync SLAVE, the
-            // automatic transport commands emitted from here (loop jumps, auto-advance,
-            // auto-stop) are suppressed so the slave follows the MASTER's mirror instead of
-            // self-driving — otherwise the slave would re-loop after the master already
-            // exited. Manual actions (button clicks / keys) run OUTSIDE this flag and still
-            // work, so the slave stays fully operable. try/finally guarantees reset across
-            // the many early returns below.
-            window._inWatcher = true;
-            try {
             // Clear active state on song rows
             var prev = document.querySelector('.song-row.active');
             if (prev) prev.classList.remove('active');
@@ -6110,7 +6109,7 @@
                                         var lc = (stLoop.loopCount || 0) + 1; // increment for this loop
                                         if (lc < activeSub.loopMax) {
                                             stLoop.loopCount = lc;
-                                            wwr_req("SET/POS/" + activeSub.start); return;
+                                            _loopSeek(activeSub.start); return;
                                         } else {
                                             // Played loopMax times — mark exhausted and fall through.
                                             // loop stays true so the button remains active and
@@ -6128,12 +6127,12 @@
                             // +LOOPFULL — loop takes absolute priority; queued region waits
                             else if (activeSub.loopFull) {
                                 if (window._nativeLoopSubId === activeSub.id) { return; } // Lua handling
-                                wwr_req("SET/POS/" + activeSub.start); return;
+                                _loopSeek(activeSub.start); return;
                             }
                             // +LOOP — respect queued region; loop only if nothing queued
                             else if (!queuedRegion) {
                                 if (window._nativeLoopSubId === activeSub.id) { return; } // Lua handling
-                                wwr_req("SET/POS/" + activeSub.start); return;
+                                _loopSeek(activeSub.start); return;
                             }
                             // (if queuedRegion exists and not loopFull, fall through to queued)
                         }
@@ -6203,7 +6202,7 @@
                     // in the same HTTP batch as the SET/POS below — preventing REAPER's
                     // Repeat from firing a conflicting jump before Lua cleanup runs.
                     _reaperNativeLoopOff();
-                    if (activeRegion.loop) { wwr_req("SET/POS/" + activeRegion.start); return; }
+                    if (activeRegion.loop) { _loopSeek(activeRegion.start); return; }
                     if (queuedRegion) {
                         wwr_req("SET/POS/" + queuedRegion.start); queuedRegion = null;
                         var qEls = document.querySelectorAll('.queued');
@@ -6307,7 +6306,6 @@
                     if (cwPlay) cwPlay.innerHTML = isPlaying ? '&#9646;&#9646; PAUSE' : '&#9654; PLAY';
                 }
             }
-            } finally { window._inWatcher = false; }
         }
 
         // --- 9. CANVAS MODE ---
@@ -8051,20 +8049,16 @@
             // --- wwr_req をラップ（ローカル動作は常に実行、送信対象のみ相手へ転送）---
             var origWwrReq = (typeof window.wwr_req === 'function') ? window.wwr_req : function () {};
             window.wwr_req = function (cmd) {
-                // The SLAVE stays fully operable — MANUAL commands (button clicks / keys) run
-                // locally as usual, so you can drive it directly / take over on failover. But
-                // AUTOMATIC transport commands from the watcher (updatePlaybackUI sets
-                // window._inWatcher) are swallowed on the slave, so it follows the MASTER's
-                // mirror instead of self-driving — otherwise it would re-loop after the master
-                // already exited the loop. The slave never SENDS to the peer (only master does).
-                if (role === 'slave' && window._inWatcher &&
-                    (typeof cmd === 'string' || typeof cmd === 'number')) {
-                    var _sc = (typeof cmd === 'string') ? cmd : String(cmd);
-                    if (shouldMirror(_sc.trim())) { return undefined; }
-                }
+                // The SLAVE stays fully operable and self-drives (Auto-Stop, advance, loops all
+                // work locally). It never SENDS to the peer (only role === 'master' mirrors).
                 var result = origWwrReq.apply(this, arguments);
                 try {
-                    if (role === 'master' && peer && (typeof cmd === 'string' || typeof cmd === 'number')) {
+                    // Loop-back jumps (SET/POS back to the section start to repeat) are NOT
+                    // mirrored: each machine loops on its own clock (same project/rate/start →
+                    // in sync), so mirroring them would double-jump the peer. Everything else
+                    // (song select, play, stop, auto-advance) IS mirrored to keep song-level sync.
+                    if (role === 'master' && peer && !window._skipMirror &&
+                        (typeof cmd === 'string' || typeof cmd === 'number')) {
                         var s = (typeof cmd === 'string') ? cmd : String(cmd);
                         var parts = s.split(';');
                         for (var i = 0; i < parts.length; i++) {
