@@ -4528,6 +4528,11 @@
 
         // Global state for nested sections: loop, skipped
         window.subStates = window.subStates || {};
+        // Remembers the last-parsed loop default (+LOOP / _L) per top-level song id,
+        // so a real-time name change can flip the song's loop state (mirrors subStates._loopDefault).
+        window.g_songLoopDefault = window.g_songLoopDefault || {};
+        // Same idea for the auto-start / chain default (_C) per top-level song id.
+        window.g_songChainDefault = window.g_songChainDefault || {};
 
         // ── Native REAPER loop via ReaSet_NativeLoop.lua ─────────────────────────────
         // AUTO-DETECTED — no manual flag or Action ID needed.
@@ -4662,6 +4667,10 @@
                     markerInfo:  prFlags.info,                  // feature 3: {} italic info
                     className:   prFlags.className,             // feature 12: [.class]
                     defaultSkip: prFlags.skip,                  // feature 11: +SKIP default
+                    loopDefault: prFlags.loop,                  // +LOOP / _L in region name (top-level songs)
+                    loopFull:    prFlags.loopFull,
+                    loopMax:     prFlags.loopMax,
+                    chainDefault: prFlags.chain,                // _C in region name (auto-start / chain)
                     id:          r[2],
                     start:       parseFloatDigits(r[3]),
                     end:         parseFloatDigits(r[4]),
@@ -5014,13 +5023,15 @@
                     if (mainMap.hasOwnProperty(item.id)) {
                         var d = mainMap[item.id];
                         d.chain = item.chain; d.skipped = (item.skipped === true); d.loop = (item.loop === true);
+                        window.g_songLoopDefault[d.id]  = !!d.loopDefault;  // record parsed defaults (saved value wins)
+                        window.g_songChainDefault[d.id] = !!d.chainDefault;
                         displayList.push(d); delete mainMap[item.id];
                     }
                 }
                 var newItems = [];
                 for (var k in mainMap) { if (mainMap.hasOwnProperty(k)) newItems.push(mainMap[k]); }
                 newItems.sort(function (a, b) { return a.start - b.start; });
-                for (var n = 0; n < newItems.length; n++) { newItems[n].chain = false; newItems[n].skipped = !!newItems[n].defaultSkip; newItems[n].loop = false; displayList.push(newItems[n]); }
+                for (var n = 0; n < newItems.length; n++) { newItems[n].chain = !!newItems[n].chainDefault; newItems[n].skipped = !!newItems[n].defaultSkip; newItems[n].loop = !!newItems[n].loopDefault; window.g_songLoopDefault[newItems[n].id] = !!newItems[n].loopDefault; window.g_songChainDefault[newItems[n].id] = !!newItems[n].chainDefault; displayList.push(newItems[n]); }
                 if (displayList.length > 0 && !isPlaying) wwr_req("SET/POS/" + displayList[0].start);
                 initialized = true;
             } else {
@@ -5030,6 +5041,23 @@
                     if (mainMap.hasOwnProperty(itm.id)) {
                         var rd = mainMap[itm.id];
                         itm.name = rd.name; itm.start = rd.start; itm.end = rd.end; itm.duration = rd.duration; itm.color = rd.color;
+                        // Real-time loop detection: if the parsed default (+LOOP / _L) changed
+                        // because the user edited the region name, apply it immediately.
+                        var prevSongDef = window.g_songLoopDefault[itm.id];
+                        var newSongDef  = !!rd.loopDefault;
+                        if (prevSongDef !== newSongDef) {
+                            itm.loop = newSongDef;
+                            window.g_songLoopDefault[itm.id] = newSongDef;
+                            lastRenderChecksum = ''; // force re-render (loop button update)
+                        }
+                        // Same real-time detection for the auto-start / chain default (_C).
+                        var prevChainDef = window.g_songChainDefault[itm.id];
+                        var newChainDef  = !!rd.chainDefault;
+                        if (prevChainDef !== newChainDef) {
+                            itm.chain = newChainDef;
+                            window.g_songChainDefault[itm.id] = newChainDef;
+                            lastRenderChecksum = ''; // force re-render (chain button update)
+                        }
                         activeIDs[itm.id] = true; delete mainMap[itm.id];
                     }
                 }
@@ -5039,7 +5067,7 @@
                 var newItems2 = [];
                 for (var k2 in mainMap) { if (mainMap.hasOwnProperty(k2)) newItems2.push(mainMap[k2]); }
                 newItems2.sort(function (a, b) { return a.start - b.start; });
-                for (var n2 = 0; n2 < newItems2.length; n2++) { newItems2[n2].chain = false; newItems2[n2].skipped = false; newItems2[n2].loop = false; displayList.push(newItems2[n2]); }
+                for (var n2 = 0; n2 < newItems2.length; n2++) { newItems2[n2].chain = !!newItems2[n2].chainDefault; newItems2[n2].skipped = false; newItems2[n2].loop = !!newItems2[n2].loopDefault; window.g_songLoopDefault[newItems2[n2].id] = !!newItems2[n2].loopDefault; window.g_songChainDefault[newItems2[n2].id] = !!newItems2[n2].chainDefault; displayList.push(newItems2[n2]); }
             }
             saveCurrentState();
             var cs = JSON.stringify(displayList.map(function (r) { return { id: r.id, chain: r.chain, skipped: r.skipped, loop: r.loop, name: r.name, color: r.color }; })) + (hideSkippedMode ? 1 : 0) + JSON.stringify(g_subRegionMap) + JSON.stringify(g_songOverrides);
@@ -5079,7 +5107,8 @@
         //   [colorname]      → named color from MARKER_COLORS palette (Feature 9)
         //   [.classname]     → custom CSS class (Feature 12)
         //   SONG END / STOP  → special playback commands (Feature 4)
-        // Parses +LOOP / +LOOPFULL / +LOOP:N flags from ANY name (region or marker).
+        // Parses +LOOP / +LOOPFULL / +LOOP:N flags (and the trailing _L / _L:N
+        // shorthand) from ANY name (region or marker).
         // Used by both parseRegionFlags() and parseMarkerName().
         // Mutates the string `s` in place, returns it cleaned.
         function _applyLoopFlags(s, out) {
@@ -5095,6 +5124,13 @@
                 if (loopMatch[1]) out.loopMax = parseInt(loopMatch[1], 10);
                 s = s.replace(loopMatch[0], '').trim();
             }
+            // Shorthand: trailing _L (or _L:N) at the end of the name → loop
+            var suffixMatch = s.match(/_L(?::(\d+))?$/);
+            if (suffixMatch) {
+                out.loop = true;
+                if (suffixMatch[1]) out.loopMax = parseInt(suffixMatch[1], 10);
+                s = s.replace(suffixMatch[0], '').trim();
+            }
             return s;
         }
 
@@ -5106,7 +5142,8 @@
                 displayName: '', info: null, tags: [],
                 pause: false, skip: false, transition: null,
                 colorHex: null, className: null, durationSec: null,
-                loop: false, loopFull: false, loopMax: null
+                loop: false, loopFull: false, loopMax: null,
+                chain: false
             };
             var s = (rawName || '').trim();
 
@@ -5155,6 +5192,17 @@
 
             // Loop flags (+LOOP, +LOOPFULL, +LOOP:N)
             s = _applyLoopFlags(s, out);
+
+            // Trailing shorthand flags in any order/combination:
+            //   _C       → auto-start (chain: continue playing into this song without stopping)
+            //   _L / _L:N → loop (re-checked here in case it was exposed after stripping _C)
+            var _sfx = true;
+            while (_sfx) {
+                _sfx = false;
+                if (/_C$/.test(s)) { out.chain = true; s = s.replace(/_C$/, '').trim(); _sfx = true; }
+                var _lm = s.match(/_L(?::(\d+))?$/);
+                if (_lm) { out.loop = true; if (_lm[1]) out.loopMax = parseInt(_lm[1], 10); s = s.replace(/_L(?::\d+)?$/, '').trim(); _sfx = true; }
+            }
 
             out.displayName = s.trim();
             return out;
