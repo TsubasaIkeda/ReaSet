@@ -3682,7 +3682,7 @@
         </div>
 
         <div class="sidebar-section">
-            <div class="sidebar-section-title">2台同期 / Failover</div>
+            <div class="sidebar-section-title">2台同期 / フェイルオーバー</div>
             <button class="sidebar-action-btn sab-slate" id="reaset-sync-btn" onclick="reasetSyncOpen()">
                 <span class="sab-icon">⇄</span> <span id="reaset-sync-btn-label">2台同期: OFF</span>
             </button>
@@ -7921,9 +7921,9 @@
                 var lbl = document.getElementById('reaset-sync-btn-label');
                 if (!btn) { return; }
                 var conf = {
-                    off:    { bg: 'linear-gradient(135deg,#37474f,#546e7a)', t: '2台同期: OFF' },
-                    master: { bg: 'linear-gradient(135deg,#B71C1C,#D32F2F)', t: '2台同期: MASTER' },
-                    slave:  { bg: 'linear-gradient(135deg,#004D40,#00796B)', t: '2台同期: SLAVE' }
+                    off:    { bg: 'linear-gradient(135deg,#37474f,#546e7a)', t: '2台同期: 無効' },
+                    master: { bg: 'linear-gradient(135deg,#B71C1C,#D32F2F)', t: '2台同期: 親機（送信）' },
+                    slave:  { bg: 'linear-gradient(135deg,#004D40,#00796B)', t: '2台同期: 子機（受信）' }
                 };
                 var m = conf[role] || conf.off;
                 var label = m.t;
@@ -7957,7 +7957,7 @@
 
                 // ヘッダ
                 var header = el('div', null, 'display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;');
-                var title = el('span', { textContent: '2台同期 / FAILOVER' },
+                var title = el('span', { textContent: '2台同期 / フェイルオーバー' },
                     'font-size:13px;font-weight:800;color:rgba(255,255,255,0.95);letter-spacing:1.5px;');
                 var closeBtn = el('button', { type: 'button', textContent: '✕' },
                     'width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.08);border:none;' +
@@ -7974,8 +7974,9 @@
 
                 var roleRow = el('div', null, 'display:flex;gap:8px;margin-bottom:18px;');
                 refs.roleBtns = {};
+                var roleLabels = { off: '無効', master: '親機（送信）', slave: '子機（受信）' };
                 ['off', 'master', 'slave'].forEach(function (r) {
-                    var b = el('button', { type: 'button', textContent: r.toUpperCase() },
+                    var b = el('button', { type: 'button', textContent: roleLabels[r] },
                         'flex:1;padding:10px 0;border-radius:10px;border:1px solid rgba(255,255,255,0.12);' +
                         'background:rgba(255,255,255,0.05);color:#fff;font-size:12px;font-weight:700;cursor:pointer;');
                     b.addEventListener('click', function () { setPendingRole(r); });
@@ -8042,13 +8043,13 @@
                 if (stats.lastError) { lines.push('直近エラー: ' + stats.lastError); }
                 var effPeer = refs.peerInput ? refs.peerInput.value.trim() : peer;
                 if (pendingRole === 'master' && !effPeer) {
-                    lines.push('⚠ MASTERですが相手アドレスが未設定です。');
+                    lines.push('⚠ 親機ですが相手アドレスが未設定です。');
                 } else if (pendingRole === 'master') {
-                    lines.push('MASTER: このマシンから相手へ送信します。');
+                    lines.push('親機（送信）: このマシンから相手機へ送信します。');
                 } else if (pendingRole === 'slave') {
-                    lines.push('SLAVE: 送信しません（相手からの受信のみ）。');
+                    lines.push('子機（受信）: 送信しません（相手機からの受信のみ）。');
                 } else {
-                    lines.push('OFF: 同期は無効です。');
+                    lines.push('無効: 同期は行いません。');
                 }
                 refs.status.textContent = lines.join('\n');
             }
