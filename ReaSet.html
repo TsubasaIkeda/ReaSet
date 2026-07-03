@@ -4036,6 +4036,9 @@
         // Auto-detect ReaSet_NativeLoop.lua: one-shot probe, plus refresh every 10s
         wwr_req("GET/EXTSTATE/ReaSet/nativeLoopReady");
         wwr_req_recur("GET/EXTSTATE/ReaSet/nativeLoopReady", 10000);
+        // Device Sync: poll the per-song loop/skip/chain state the MASTER broadcasts, so a
+        // SLAVE mirrors the master's UI toggles. Harmless for off/master (apply is slave-only).
+        wwr_req_recur("GET/EXTSTATE/ReaSet/uiState", 1000);
         wwr_start();
 
         // --- 2. STATE ---
@@ -4499,6 +4502,14 @@
                         }
                         break;
                     case "EXTSTATE":
+                        // Device Sync: SLAVE applies the loop/skip/chain state the MASTER
+                        // broadcasts (mirrored via ExtState). Master/off ignore it.
+                        if (tok[1] === "ReaSet" && tok[2] === "uiState") {
+                            if (_isSyncSlave() && tok[3] && tok[3] !== window._lastUiStateApplied) {
+                                window._lastUiStateApplied = tok[3];
+                                _applyUiState(tok[3]);
+                            }
+                        }
                         // Auto-detection: ReaSet_NativeLoop.lua writes "ReaSet/nativeLoopReady=1"
                         if (tok[1] === "ReaSet" && tok[2] === "nativeLoopReady") {
                             var nlReady = (tok[3] === "1");
@@ -5695,11 +5706,11 @@
         }
         function toggleChain(id) {
             for (var i = 0; i < displayList.length; i++) { if (displayList[i].id == id) { displayList[i].chain = !displayList[i].chain; break; } }
-            saveCurrentState(); lastRenderChecksum = ""; syncRegions();
+            saveCurrentState(); lastRenderChecksum = ""; syncRegions(); _broadcastUiState();
         }
         function toggleLoop(id) {
             for (var i = 0; i < displayList.length; i++) { if (displayList[i].id == id) { displayList[i].loop = !displayList[i].loop; break; } }
-            saveCurrentState(); lastRenderChecksum = ""; syncRegions();
+            saveCurrentState(); lastRenderChecksum = ""; syncRegions(); _broadcastUiState();
         }
         function toggleCurrentLoop(e) {
             if (e) e.stopPropagation();
@@ -5715,7 +5726,7 @@
                     if (activeSub) {
                         toggleSubLoop(activeSub.id); return;
                     }
-                    r.loop = !r.loop; saveCurrentState(); lastRenderChecksum = ""; syncRegions(); return;
+                    r.loop = !r.loop; saveCurrentState(); lastRenderChecksum = ""; syncRegions(); _broadcastUiState(); return;
                 }
             }
         }
@@ -5739,16 +5750,71 @@
                         _reaperNativeLoopOn(_tslSub.start, _tslSub.end, _tslMax, id);
                     }
                 }
-                lastRenderChecksum = ""; syncRegions();
+                lastRenderChecksum = ""; syncRegions(); _broadcastUiState();
             }
         }
         function toggleSubSkip(id) {
-            if (window.subStates[id]) { window.subStates[id].skipped = !window.subStates[id].skipped; lastRenderChecksum = ""; syncRegions(); }
+            if (window.subStates[id]) { window.subStates[id].skipped = !window.subStates[id].skipped; lastRenderChecksum = ""; syncRegions(); _broadcastUiState(); }
         }
         function toggleSkip(id) {
             for (var i = 0; i < displayList.length; i++) { if (displayList[i].id == id) { displayList[i].skipped = !displayList[i].skipped; break; } }
-            saveCurrentState(); lastRenderChecksum = ""; syncRegions();
+            saveCurrentState(); lastRenderChecksum = ""; syncRegions(); _broadcastUiState();
         }
+
+        // ── Device Sync: mirror the MASTER's per-song loop/skip/chain toggles to the SLAVE ──
+        // Compact per-id flag string: 'l'=loop, 's'=skip, 'c'=chain.
+        function _serializeUiState() {
+            var so = {}, su = {};
+            for (var i = 0; i < displayList.length; i++) {
+                var d = displayList[i];
+                so[d.id] = (d.loop ? 'l' : '') + (d.skipped ? 's' : '') + (d.chain ? 'c' : '');
+            }
+            for (var id in window.subStates) {
+                if (window.subStates.hasOwnProperty(id)) {
+                    var st = window.subStates[id];
+                    su[id] = (st.loop ? 'l' : '') + (st.skipped ? 's' : '');
+                }
+            }
+            return JSON.stringify({ so: so, su: su });
+        }
+        // Applied on the SLAVE when the mirrored uiState changes.
+        function _applyUiState(encoded) {
+            var payload;
+            try { payload = JSON.parse(decodeURIComponent(encoded)); } catch (e) { return; }
+            if (!payload) { return; }
+            var changed = false;
+            if (payload.so) {
+                for (var i = 0; i < displayList.length; i++) {
+                    var d = displayList[i], f = payload.so[d.id];
+                    if (f === undefined) { continue; }
+                    var nl = f.indexOf('l') !== -1, ns = f.indexOf('s') !== -1, nc = f.indexOf('c') !== -1;
+                    if (d.loop !== nl || d.skipped !== ns || d.chain !== nc) {
+                        d.loop = nl; d.skipped = ns; d.chain = nc; changed = true;
+                    }
+                }
+            }
+            if (payload.su) {
+                for (var sid in payload.su) {
+                    if (!payload.su.hasOwnProperty(sid)) { continue; }
+                    var st = window.subStates[sid]; if (!st) { continue; }
+                    var g = payload.su[sid], sl = g.indexOf('l') !== -1, ss = g.indexOf('s') !== -1;
+                    if (st.loop !== sl || st.skipped !== ss) { st.loop = sl; st.skipped = ss; changed = true; }
+                }
+            }
+            if (changed) { saveCurrentState(); lastRenderChecksum = ''; renderSetlist(); }
+        }
+        // MASTER: broadcast the current loop/skip/chain state the moment a toggle changes it
+        // (event-driven, not polled), so the SLAVE follows the master's UI. Dedups so an
+        // unchanged state isn't re-sent. Goes out on the mirror via EXTSTATE.
+        window._lastUiStateSent = null;
+        function _broadcastUiState() {
+            if (!_isMasterMirroring()) { return; }
+            var payload = _serializeUiState();
+            if (payload === window._lastUiStateSent) { return; }
+            window._lastUiStateSent = payload;
+            wwr_req("SET/EXTSTATEPERSIST/ReaSet/uiState/" + encodeURIComponent(payload));
+        }
+        window._broadcastUiState = _broadcastUiState;
         function findNextValidSong(startIdx) {
             for (var i = startIdx + 1; i < displayList.length; i++) { if (!displayList[i].skipped) return displayList[i]; }
             return null;
@@ -8232,6 +8298,12 @@
                 updateButton();
                 renderStatus();
                 closeModal();
+                // Push the current loop/skip/chain state once so a freshly-configured SLAVE
+                // starts in sync (later changes go out on each toggle).
+                if (role === 'master' && peer && typeof window._broadcastUiState === 'function') {
+                    window._lastUiStateSent = null;
+                    window._broadcastUiState();
+                }
             }
 
             function openModal() {
