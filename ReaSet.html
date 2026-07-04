@@ -3747,6 +3747,14 @@
                 <span id="midi-status-text">Initializing…</span>
             </div>
 
+            <!-- Input device filter: only the selected device is accepted -->
+            <div class="midi-learn-box" style="margin-bottom:12px">
+                <div class="midi-section-label">Input device</div>
+                <select id="midi-device-select" class="midi-action-select" onchange="setMidiDevice(this.value)">
+                    <option value="">All devices</option>
+                </select>
+            </div>
+
             <!-- Learn section -->
             <div class="midi-learn-box">
                 <div class="midi-section-label">Action to assign</div>
@@ -7387,6 +7395,15 @@
         var g_midiMappings = {};        // { "ch:type:data1" : "action_id" }
         var g_midiLearnActive = false;
         var g_midiLearnTimeout = null;
+        var g_midiDeviceId = '';        // '' = accept all; otherwise only this input port id
+        try { g_midiDeviceId = localStorage.getItem('reaset_midi_device') || ''; } catch (e) {}
+
+        // Restrict input to a single device (or '' for all). Persisted across reloads.
+        function setMidiDevice(id) {
+            g_midiDeviceId = id || '';
+            try { localStorage.setItem('reaset_midi_device', g_midiDeviceId); } catch (e) {}
+            updateMidiStatusUI();
+        }
 
         // ── Human-readable labels ──────────────────────────────────
         var MIDI_ACTION_LABELS = {
@@ -7489,6 +7506,10 @@
 
         // ── MIDI message handler ───────────────────────────────────
         function onMidiMessage(event) {
+            // Only accept the selected input device. When g_midiDeviceId is set, messages from
+            // any other MIDI input are ignored (both for Learn and for triggering actions).
+            if (g_midiDeviceId && event.target && event.target.id !== g_midiDeviceId) return;
+
             var d = event.data;
             if (!d || d.length < 2) return;
 
@@ -7666,6 +7687,26 @@
             list.innerHTML = html;
         }
 
+        // Rebuild the input-device dropdown from the currently connected inputs.
+        function populateMidiDevices() {
+            var sel = document.getElementById('midi-device-select');
+            if (!sel || !g_midiAccess) return;
+            var opts = '<option value="">All devices</option>';
+            var haveSaved = false;
+            g_midiAccess.inputs.forEach(function (p) {
+                var name = (p.name || 'Input').replace(/</g, '&lt;');
+                var dead = p.state !== 'connected' ? ' (disconnected)' : '';
+                if (p.id === g_midiDeviceId) haveSaved = true;
+                opts += '<option value="' + p.id + '">' + name + dead + '</option>';
+            });
+            // Keep a saved-but-not-present device selectable so its filter still applies.
+            if (g_midiDeviceId && !haveSaved) {
+                opts += '<option value="' + g_midiDeviceId + '">(saved device — not connected)</option>';
+            }
+            sel.innerHTML = opts;
+            sel.value = g_midiDeviceId;
+        }
+
         function updateMidiStatusUI() {
             var dot  = document.getElementById('midi-status-dot');
             var text = document.getElementById('midi-status-text');
@@ -7675,6 +7716,7 @@
                 setMidiStatusUI('error', 'Not initialized');
                 return;
             }
+            populateMidiDevices();
             var inputs = [];
             g_midiAccess.inputs.forEach(function(p) { if (p.state === 'connected') inputs.push(p.name); });
             if (inputs.length === 0) {
@@ -7684,8 +7726,15 @@
             } else {
                 dot.className  = 'midi-dot active';
                 if (ind) ind.className = 'midi-indicator active';
-                text.innerText = inputs.join(', ');
+                // Reflect that filtering is active.
+                text.innerText = g_midiDeviceId ? ('Filtering: ' + (_midiDeviceName(g_midiDeviceId) || inputs.join(', '))) : inputs.join(', ');
             }
+        }
+
+        function _midiDeviceName(id) {
+            var nm = null;
+            if (g_midiAccess) g_midiAccess.inputs.forEach(function (p) { if (p.id === id) nm = p.name; });
+            return nm;
         }
 
         function setMidiStatusUI(state, msg) {
