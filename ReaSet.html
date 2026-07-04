@@ -4625,14 +4625,15 @@
                 return !!(c && c.role === 'slave');
             } catch (e) { return false; }
         }
-        // Loop-back seek (jump to the section/region start to repeat). The MASTER issues it
-        // normally, so it mirrors to the peer and drives the slave's loop in lockstep — this
-        // keeps the loop AND its exit synced (mid-song +LOOP:N exits produce no command, so
-        // the slave must follow the master's mirrored jumps, not count on its own). The SLAVE
-        // therefore does NOT self-loop; it waits for the master's mirrored jump instead.
+        // Loop-back seek (jump to the section/region start to repeat). Both machines loop on
+        // their OWN clock (same project, same rate, same start → identical loop count and exit
+        // timing), so the loop-back is NOT mirrored — that would double-jump the peer. Crucially
+        // this means the SLAVE keeps looping by itself: if the master crashes mid-show, the
+        // backup carries on looping and exits the loop normally on its own count (failover).
         function _loopSeek(pos) {
-            if (_isSyncSlave()) { return; }
-            wwr_req("SET/POS/" + pos);
+            window._skipMirror = true;
+            try { wwr_req("SET/POS/" + pos); }
+            finally { window._skipMirror = false; }
         }
 
         // Signal the background script to start a native loop session.
@@ -8180,13 +8181,14 @@
             var origWwrReq = (typeof window.wwr_req === 'function') ? window.wwr_req : function () {};
             window.wwr_req = function (cmd) {
                 // The SLAVE stays fully operable and self-drives (Auto-Stop, advance, loops all
-                // work locally). It never SENDS to the peer (only role === 'master' mirrors).
+                // work locally) — so it can carry the show alone if the master dies. It never
+                // SENDS to the peer (only role === 'master' mirrors).
                 var result = origWwrReq.apply(this, arguments);
                 try {
-                    // Mirror all transport commands (incl. loop-back jumps) to the peer. The
-                    // slave does not self-loop (see _loopSeek), so mirroring the master's loop
-                    // jumps keeps the loop and its exit synced in lockstep.
-                    if (role === 'master' && peer &&
+                    // Mirror transport commands to the peer, EXCEPT loop-back jumps (_skipMirror):
+                    // each machine loops on its own clock, so forwarding loop jumps would
+                    // double-jump the peer. Song select / play / stop / advance are mirrored.
+                    if (role === 'master' && peer && !window._skipMirror &&
                         (typeof cmd === 'string' || typeof cmd === 'number')) {
                         var s = (typeof cmd === 'string') ? cmd : String(cmd);
                         var parts = s.split(';');
